@@ -26,6 +26,12 @@ assert len(args) == 1, "usage"
 path = args[0]
 
 
+# application init ###########################################################
+
+pool = NSAutoreleasePool.alloc().init()
+app = NSApplication.sharedApplication()
+
+
 # opening presentation #######################################################
 
 url = NSURL.fileURLWithPath_(path)
@@ -60,10 +66,16 @@ pdf = PDFDocument.alloc().initWithURL_(url)
 page_count = pdf.pageCount()
 current_page = 0
 
+class Redisplayer(NSObject):
+	def display_(self, timer=None):
+		for window in app.windows():
+			window.display()
+redisplayer = Redisplayer.alloc().init()
+
 def goto_page(page):
 	global current_page
 	current_page = min(max(0, page), page_count-1)
-	NSApp.delegate().display_()
+	redisplayer.display_()
 
 
 # handling full screens ######################################################
@@ -71,7 +83,7 @@ def goto_page(page):
 fullscreen = False
 def toggle_fullscreen():
 	global fullscreen
-	for window, screen in reversed(zip(NSApp.windows(), NSScreen.screens())):
+	for window, screen in reversed(zip(app.windows(), NSScreen.screens())):
 		view = window.contentView()
 		if fullscreen:
 			view.exitFullScreenModeWithOptions_({})
@@ -154,7 +166,7 @@ class PresenterView(NSView):
 			goto_page(current_page+1)
 		
 		elif c == "q":
-			NSApp.terminate_(self)
+			app.terminate_(self)
 
 
 # presentation ###############################################################
@@ -182,58 +194,45 @@ class PresentationView(NSView):
 		transform.concat()
 
 
-# main #######################################################################	
+# windows ####################################################################
+
+# presenter window
+presenter_window = NSWindow.alloc().initWithContentRect_styleMask_backing_defer_screen_(
+	PRESENTER_FRAME,
+	NSMiniaturizableWindowMask|NSResizableWindowMask|NSTitledWindowMask,
+	NSBackingStoreBuffered,
+	NO,
+	None,
+)
+presenter_window.setTitle_(name)
+	
+presenter_view = PresenterView.alloc().initWithFrame_(presenter_window.frame())
+presenter_window.setContentView_(presenter_view)
+presenter_window.setInitialFirstResponder_(presenter_view)
+presenter_window.makeFirstResponder_(presenter_view)
+	
+# presentation window
+presentation_window = NSWindow.alloc().initWithContentRect_styleMask_backing_defer_screen_(
+	PRESENTER_FRAME,
+	NSMiniaturizableWindowMask|NSResizableWindowMask|NSTitledWindowMask,
+	NSBackingStoreBuffered,
+	NO,
+	None,
+)
+presentation_window.setTitle_(name)
+
+presentation_view = PresentationView.alloc().initWithFrame_(presentation_window.frame())
+presentation_window.setContentView_(presentation_view)
+presentation_window.setInitialFirstResponder_(presentation_view)
+
+presenter_window.makeKeyAndOrderFront_(nil)
+	
+# redisplay
+redisplay_timer = NSTimer.scheduledTimerWithTimeInterval_target_selector_userInfo_repeats_(
+	1.,
+	redisplayer, "display:",
+	nil, YES)
 		
-def main(argv=None):
-	# application init
-	pool = NSAutoreleasePool.alloc().init()
-	app = NSApplication.sharedApplication()
+# main loop ##################################################################
 
-	# presenter window
-	presenter_window = NSWindow.alloc().initWithContentRect_styleMask_backing_defer_screen_(
-		PRESENTER_FRAME,
-		NSMiniaturizableWindowMask|NSResizableWindowMask|NSTitledWindowMask,
-		NSBackingStoreBuffered,
-		NO,
-		None,
-	)
-	presenter_window.setTitle_(name)
-	
-	presenter_view = PresenterView.alloc().initWithFrame_(presenter_window.frame())
-	presenter_window.setContentView_(presenter_view)
-	presenter_window.setInitialFirstResponder_(presenter_view)
-	presenter_window.makeFirstResponder_(presenter_view)
-	
-	# presentation window
-	presentation_window = NSWindow.alloc().initWithContentRect_styleMask_backing_defer_screen_(
-		PRESENTER_FRAME,
-		NSMiniaturizableWindowMask|NSResizableWindowMask|NSTitledWindowMask,
-		NSBackingStoreBuffered,
-		NO,
-		None,
-	)
-	presentation_window.setTitle_(name)
-
-	presentation_view = PresentationView.alloc().initWithFrame_(presentation_window.frame())
-	presentation_window.setContentView_(presentation_view)
-	presentation_window.setInitialFirstResponder_(presentation_view)
-	
-	# redisplay
-	class Redisplayer(NSObject):
-		def display_(self, timer=None):
-			for window in NSApp.windows():
-				window.display()
-	redisplay = Redisplayer.alloc().init()
-
-	redisplay_timer = NSTimer.scheduledTimerWithTimeInterval_target_selector_userInfo_repeats_(
-		1.,
-		redisplay, "display:",
-		nil, YES)
-			
-	# main loop
-	presenter_window.makeKeyAndOrderFront_(nil)
-	app.run()
-
-
-if __name__ == "__main__":
-	sys.exit(main())
+sys.exit(app.run())
