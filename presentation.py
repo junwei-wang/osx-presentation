@@ -7,6 +7,8 @@ import sys
 import os
 import time
 
+from collections import defaultdict
+
 from objc import *
 from Foundation import *
 from Cocoa import *
@@ -37,18 +39,23 @@ app = NSApplication.sharedApplication()
 url = NSURL.fileURLWithPath_(path)
 pdf = PDFDocument.alloc().initWithURL_(url)
 
-#page = pdf.pageAtIndex_(0)
-#for an in  page.annotations():
-#	action = an.mouseUpAction()
-#	print an.bounds()
-#	t = type(action)
-#	if t == PDFActionGoTo:
-#		print action.destination()
-#	elif t == PDFActionURL:
-#		print action.URL()
-#	elif t == PDFActionNamed:
-#		print action.name()
-
+page = pdf.pageAtIndex_(2)
+for annotation in page.annotations():
+	annotation_type = type(annotation)
+	if annotation_type == PDFAnnotationText:
+		print annotation.contents()
+		annotation.setShouldDisplay_(False)
+	elif annotation_type == PDFAnnotationLink:
+		continue
+		
+		action = annotation.mouseUpAction()
+		t = type(action)
+		if t == PDFActionGoTo:
+			print action.destination()
+		elif t == PDFActionURL:
+			print action.URL()
+		elif t == PDFActionNamed:
+			print action.name()
 #	kPDFActionNamedNone = 0, 
 #    kPDFActionNamedNextPage = 1, 
 #    kPDFActionNamedPreviousPage = 2, 
@@ -64,18 +71,29 @@ pdf = PDFDocument.alloc().initWithURL_(url)
 
 
 page_count = pdf.pageCount()
+
+notes = defaultdict(list)
+for page_number in range(page_count):
+	page = pdf.pageAtIndex_(page_number)
+	for annotation in page.annotations():
+		if type(annotation) == PDFAnnotationText:
+			annotation.setShouldDisplay_(False)
+			notes[page_number].append(annotation.contents())
+
 current_page = 0
+def goto_page(page):
+	global current_page
+	current_page = min(max(0, page), page_count-1)
+	redisplayer.display_()
+
+
+# handling redisplay #########################################################
 
 class Redisplayer(NSObject):
 	def display_(self, timer=None):
 		for window in app.windows():
 			window.display()
 redisplayer = Redisplayer.alloc().init()
-
-def goto_page(page):
-	global current_page
-	current_page = min(max(0, page), page_count-1)
-	redisplayer.display_()
 
 
 # handling full screens ######################################################
@@ -121,20 +139,29 @@ class PresenterView(NSView):
 		transform.invert()
 		transform.concat()
 	
-		# page number
-		page_number = NSString.stringWithString_("%s/%s" % (current_page+1, page_count))
-		page_number.drawAtPoint_withAttributes_((margin, (height+h*r+font_size)/2.), {
-			NSFontAttributeName:            NSFont.labelFontOfSize_(font_size),
-			NSForegroundColorAttributeName: NSColor.whiteColor(),
-		})
-
 		# time
 		now = NSString.stringWithString_(time.strftime("%H:%M:%S"))
-		now.drawAtPoint_withAttributes_((margin, margin), {
+		now.drawAtPoint_withAttributes_((margin, height-margin*2), {
 			NSFontAttributeName:            NSFont.labelFontOfSize_(margin),
 			NSForegroundColorAttributeName: NSColor.whiteColor(),
 		})
 	
+		# page number
+		page_number = NSString.stringWithString_("%s/%s" % (current_page+1, page_count))
+		attr = {
+			NSFontAttributeName:            NSFont.labelFontOfSize_(font_size),
+			NSForegroundColorAttributeName: NSColor.whiteColor(),
+		}
+		tw, _ = page_number.sizeWithAttributes_(attr)
+		page_number.drawAtPoint_withAttributes_((margin+current_width-tw, height-margin*2.), attr)
+
+		# notes
+		note = NSString.stringWithString_("\n".join(notes[current_page]))
+		note.drawAtPoint_withAttributes_((margin, margin), {
+			NSFontAttributeName:            NSFont.labelFontOfSize_(font_size),
+			NSForegroundColorAttributeName: NSColor.whiteColor(),
+		})
+		
 		# next page
 		try:
 			page = pdf.pageAtIndex_(current_page+1)
