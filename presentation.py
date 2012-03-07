@@ -95,7 +95,8 @@ class PresenterView(NSView):
 
 		# current 
 		self.page = pdf.pageAtIndex_(current_page)
-		_, (w, h) = self.page.boundsForBox_(kPDFDisplayBoxCropBox)
+		page_rect = self.page.boundsForBox_(kPDFDisplayBoxCropBox)
+		_, (w, h) = page_rect
 		r = current_width/w
 	
 		self.transform = NSAffineTransform.transform()
@@ -103,7 +104,8 @@ class PresenterView(NSView):
 		self.transform.scaleXBy_yBy_(r, r)
 		self.transform.translateXBy_yBy_(0., -h/2.)
 		self.transform.concat()
-
+		
+		NSEraseRect(page_rect)
 		self.page.drawWithBox_(kPDFDisplayBoxCropBox)
 		
 		# links
@@ -126,7 +128,7 @@ class PresenterView(NSView):
 		})
 	
 		# page number
-		page_number = NSString.stringWithString_("%s/%s" % (current_page+1, page_count))
+		page_number = NSString.stringWithString_("%s (%s/%s)" % (self.page.label(), current_page+1, page_count))
 		attr = {
 			NSFontAttributeName:            NSFont.labelFontOfSize_(font_size),
 			NSForegroundColorAttributeName: NSColor.whiteColor(),
@@ -146,7 +148,8 @@ class PresenterView(NSView):
 			page = pdf.pageAtIndex_(current_page+1)
 		except:
 			return
-		_, (w, h) = page.boundsForBox_(kPDFDisplayBoxCropBox)
+		page_rect = page.boundsForBox_(kPDFDisplayBoxCropBox)
+		_, (w, h) = page_rect
 		r = (width - (3*margin + current_width))/w
 	
 		transform = NSAffineTransform.transform()
@@ -155,6 +158,7 @@ class PresenterView(NSView):
 		transform.translateXBy_yBy_(0., -h/2.)
 		transform.concat()
 
+		NSEraseRect(page_rect)
 		page.drawWithBox_(kPDFDisplayBoxCropBox)
 		transform.invert()
 		transform.concat()
@@ -210,7 +214,8 @@ class PresentationView(NSView):
 	
 		# current page
 		page = pdf.pageAtIndex_(current_page)
-		_, (w, h) = page.boundsForBox_(kPDFDisplayBoxCropBox)
+		page_rect = page.boundsForBox_(kPDFDisplayBoxCropBox)
+		_, (w, h) = page_rect
 		r = min(width/w, height/h)
 	
 		transform = NSAffineTransform.transform()
@@ -219,6 +224,7 @@ class PresentationView(NSView):
 		transform.translateXBy_yBy_(-w/2., -h/2.)
 		transform.concat()
 
+		NSEraseRect(page_rect)
 		page.drawWithBox_(kPDFDisplayBoxCropBox)
 		transform.invert()
 		transform.concat()
@@ -262,7 +268,8 @@ redisplay_timer = NSTimer.scheduledTimerWithTimeInterval_target_selector_userInf
 	1.,
 	redisplayer, "display:",
 	nil, YES)
-		
+
+
 # main loop ##################################################################
 
 sys.exit(app.run())
