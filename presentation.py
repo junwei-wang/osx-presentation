@@ -128,13 +128,15 @@ class PresenterView(NSView):
 		})
 	
 		# page number
-		page_number = NSString.stringWithString_("%s (%s/%s)" % (self.page.label(), current_page+1, page_count))
+		page_number = NSString.stringWithString_("%s (%s/%s)" % (
+			self.page.label(), current_page+1, page_count))
 		attr = {
 			NSFontAttributeName:            NSFont.labelFontOfSize_(font_size),
 			NSForegroundColorAttributeName: NSColor.whiteColor(),
 		}
 		tw, _ = page_number.sizeWithAttributes_(attr)
-		page_number.drawAtPoint_withAttributes_((margin+current_width-tw, height-margin*2.), attr)
+		page_number.drawAtPoint_withAttributes_((margin+current_width-tw,
+		                                         height-margin*2.), attr)
 
 		# notes
 		note = NSString.stringWithString_("\n".join(notes[current_page]))
@@ -246,7 +248,9 @@ presenter_view = PresenterView.alloc().initWithFrame_(presenter_window.frame())
 presenter_window.setContentView_(presenter_view)
 presenter_window.setInitialFirstResponder_(presenter_view)
 presenter_window.makeFirstResponder_(presenter_view)
-	
+presenter_window.center()
+
+
 # presentation window
 presentation_window = NSWindow.alloc().initWithContentRect_styleMask_backing_defer_screen_(
 	PRESENTER_FRAME,
