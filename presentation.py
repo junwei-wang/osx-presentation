@@ -1,6 +1,15 @@
 #!/usr/bin/env python2.6
 # -*- coding: utf-8 -*-
 
+
+"""
+A PDF presentation tool for Mac OS X
+
+Copyright (c) 2011, IIHM/LIG - Renaud Blanch <http://iihm.imag.fr/blanch/>
+Licence: GPLv3 or higher <http://www.gnu.org/licenses/gpl.html>
+"""
+
+
 # imports ####################################################################
 
 import sys
@@ -17,7 +26,7 @@ from Quartz import *
 
 # constants ##################################################################
 
-PRESENTER_FRAME = ((100., 100.), (640., 480.))
+PRESENTER_FRAME = ((100., 100.), (800., 600.))
 
 
 # handling args ##############################################################
