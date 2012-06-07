@@ -41,6 +41,7 @@ path = args[0]
 
 pool = NSAutoreleasePool.alloc().init()
 app = NSApplication.sharedApplication()
+app.activateIgnoringOtherApps_(True)
 
 
 # opening presentation #######################################################
