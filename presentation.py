@@ -192,10 +192,10 @@ class PresenterView(NSView):
 		if c == "f":
 			toggle_fullscreen()
 		
-		elif c in [u"\uf700", u"\uf702"]:
+		elif c in [NSUpArrowFunctionKey, NSLeftArrowFunctionKey]:
 			goto_page(current_page-1)
 		
-		elif c in [u"\uf701", u"\uf703"]:
+		elif c in [NSDownArrowFunctionKey, NSRightArrowFunctionKey]:
 			goto_page(current_page+1)
 		
 		elif c == "q":
