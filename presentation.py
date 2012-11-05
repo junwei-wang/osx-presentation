@@ -208,11 +208,29 @@ class PresenterView(NSView):
 		if annotation is None:
 			return
 
-		annotation_type = type(annotation)
-		if annotation_type == PDFAnnotationLink:
-			destination = annotation.destination()
-			if destination:
-				goto_page(pdf.indexForPage_(destination.page()))
+		if type(annotation) != PDFAnnotationLink:
+			return
+
+		action = annotation.mouseUpAction()
+		if type(action) == PDFActionNamed:
+			action_name = action.name()
+			target = {
+				kPDFActionNamedNextPage:     current_page+1,
+				kPDFActionNamedPreviousPage: current_page-1,
+				kPDFActionNamedFirstPage:    0,
+				kPDFActionNamedLastPage:     page_count-1,
+#				kPDFActionNamedGoBack:       ,
+#				kPDFActionNamedGoForward:    ,
+#				kPDFActionNamedGoToPage = 7,
+#				kPDFActionNamedFind = 8,
+#				kPDFActionNamedPrint = 9,
+			}.get(action_name, current_page)
+			goto_page(target)
+			return
+
+		destination = annotation.destination()
+		if destination:
+			goto_page(pdf.indexForPage_(destination.page()))
 
 
 # presentation ###############################################################
