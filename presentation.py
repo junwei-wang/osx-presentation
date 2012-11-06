@@ -68,44 +68,34 @@ past_pages = []
 current_page = 0
 future_pages = []
 
-def goto_page(page):
+def _goto(page):
 	global current_page
-	
+	current_page = page
+	toggle_web_view(visible=False)
+	redisplayer.display_()
+
+
+def goto_page(page):
 	page = min(max(0, page), page_count-1)
 	if page == current_page:
 		return
-	
-	past_pages.append(current_page)
-	current_page = page
 	del future_pages[:]
-	
-	redisplayer.display_()
-
-
-def back():
-	global current_page
-	try:
-		page = past_pages.pop()
-	except IndexError:
-		return
-	
-	future_pages.append(current_page)
-	current_page = page
-	
-	redisplayer.display_()
-
-
-def forward():
-	global current_page
-	try:
-		page = future_pages.pop()
-	except IndexError:
-		return
-	
 	past_pages.append(current_page)
-	current_page = page
-	
-	redisplayer.display_()
+	_goto(page)
+
+
+def _push_pop_page(pop_pages, push_pages):
+	def action():
+		try:
+			page = pop_pages.pop()
+		except IndexError:
+			return
+		push_pages.append(current_page)
+		_goto(page)
+	return action
+
+back    = _push_pop_page(past_pages, future_pages)
+forward = _push_pop_page(future_pages, past_pages)
 
 
 def next_page():
@@ -249,7 +239,7 @@ class PresenterView(NSView):
 		
 		action = {
 			"f":                     toggle_fullscreen,
-			"w":                     toggle_presentation_view,
+			"w":                     toggle_web_view,
 			NSUpArrowFunctionKey:    prev_page,
 			NSLeftArrowFunctionKey:  prev_page,
 			NSDownArrowFunctionKey:  next_page,
@@ -297,12 +287,12 @@ class PresenterView(NSView):
 		url = annotation.URL()
 		if url:
 			web_view.mainFrame().loadRequest_(NSURLRequest.requestWithURL_(url))
-			toggle_presentation_view(web_view)
+			toggle_web_view(visible=True)
 
 
 # presentation ###############################################################
 
-class PresentationView(NSView):
+class SlideView(NSView):
 	def drawRect_(self, rect):
 		bounds = self.bounds()
 		width, height = bounds.size
@@ -329,27 +319,6 @@ class PresentationView(NSView):
 
 # windows ####################################################################
 
-# presentation window
-presentation_window = NSWindow.alloc().initWithContentRect_styleMask_backing_defer_screen_(
-	PRESENTER_FRAME,
-	NSMiniaturizableWindowMask|NSResizableWindowMask|NSTitledWindowMask,
-	NSBackingStoreBuffered,
-	NO,
-	None,
-)
-presentation_window.setTitle_(name)
-
-presentation_view = PresentationView.alloc().initWithFrame_(presentation_window.frame())
-web_view = WebView.alloc().initWithFrame_frameName_groupName_(presentation_window.frame(), nil, nil)
-
-def toggle_presentation_view(view=None):
-	if view is None:
-		view = presentation_view if presentation_window.contentView() ==  web_view else web_view
-	presentation_window.setContentView_(view)
-	presentation_window.setInitialFirstResponder_(view)
-toggle_presentation_view(presentation_view)
-
-
 # presenter window
 presenter_window = NSWindow.alloc().initWithContentRect_styleMask_backing_defer_screen_(
 	PRESENTER_FRAME,
@@ -366,6 +335,37 @@ presenter_view = PresenterView.alloc().initWithFrame_(presenter_window.frame())
 presenter_window.setContentView_(presenter_view)
 presenter_window.setInitialFirstResponder_(presenter_view)
 presenter_window.makeFirstResponder_(presenter_view)
+
+
+# presentation window
+presentation_window = NSWindow.alloc().initWithContentRect_styleMask_backing_defer_screen_(
+	PRESENTER_FRAME,
+	NSMiniaturizableWindowMask|NSResizableWindowMask|NSTitledWindowMask,
+	NSBackingStoreBuffered,
+	NO,
+	None,
+)
+presentation_window.setTitle_(name)
+presentation_window.makeKeyAndOrderFront_(nil)
+
+presentation_view = NSView.alloc().initWithFrame_(presentation_window.frame())
+
+slide_view = SlideView.alloc().initWithFrame_(presentation_view.frame())
+web_view = WebView.alloc().initWithFrame_frameName_groupName_(presentation_view.frame(), nil, nil)
+
+for view in [slide_view, web_view]:
+	view.setAutoresizingMask_(NSViewWidthSizable|NSViewHeightSizable)
+	view.setFrameOrigin_((0, 0))
+	presentation_view.addSubview_(view)
+
+def toggle_web_view(visible=None):
+	if visible is None:
+		visible = web_view.isHidden()
+	web_view.setHidden_(not visible)
+toggle_web_view(False)
+
+presentation_window.setContentView_(presentation_view)
+presentation_window.setInitialFirstResponder_(presentation_view)
 
 
 # redisplay
