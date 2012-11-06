@@ -27,6 +27,7 @@ from Quartz import *
 # constants ##################################################################
 
 PRESENTER_FRAME = ((100., 100.), (800., 600.))
+def nop(): pass
 
 
 # handling args ##############################################################
@@ -59,11 +60,64 @@ for page_number in range(page_count):
 		if type(annotation) == PDFAnnotationText:
 			notes[page_number].append(annotation.contents())
 
+
+# page navigation ############################################################
+
+past_pages = []
 current_page = 0
+future_pages = []
+
 def goto_page(page):
 	global current_page
-	current_page = min(max(0, page), page_count-1)
+	
+	page = min(max(0, page), page_count-1)
+	if page == current_page:
+		return
+	
+	past_pages.append(current_page)
+	current_page = page
+	del future_pages[:]
+	
 	redisplayer.display_()
+
+
+def back():
+	global current_page
+	try:
+		page = past_pages.pop()
+	except IndexError:
+		return
+	
+	future_pages.append(current_page)
+	current_page = page
+	
+	redisplayer.display_()
+
+
+def forward():
+	global current_page
+	try:
+		page = future_pages.pop()
+	except IndexError:
+		return
+	
+	past_pages.append(current_page)
+	current_page = page
+	
+	redisplayer.display_()
+
+
+def next_page():
+	goto_page(current_page+1)
+
+def prev_page():
+	goto_page(current_page-1)
+
+def home_page():
+	goto_page(0)
+
+def last_page():
+	goto_page(page_count-1)
 
 
 # handling redisplay #########################################################
@@ -189,18 +243,22 @@ class PresenterView(NSView):
 	
 	def keyDown_(self, event):
 		c = event.characters()
-		if c == "f":
-			toggle_fullscreen()
-		
-		elif c in [NSUpArrowFunctionKey, NSLeftArrowFunctionKey]:
-			goto_page(current_page-1)
-		
-		elif c in [NSDownArrowFunctionKey, NSRightArrowFunctionKey]:
-			goto_page(current_page+1)
-		
-		elif c == "q":
+		if c == "q":
 			app.terminate_(self)
-	
+		
+		action = {
+			"f":                     toggle_fullscreen,
+			NSUpArrowFunctionKey:    prev_page,
+			NSLeftArrowFunctionKey:  prev_page,
+			NSDownArrowFunctionKey:  next_page,
+			NSRightArrowFunctionKey: next_page,
+			NSHomeFunctionKey:       home_page,
+			NSEndFunctionKey:        last_page,
+			NSPageUpFunctionKey:     back,
+			NSPageDownFunctionKey:   forward,
+		}.get(c, nop)
+		action()
+		
 	
 	def mouseUp_(self, event):
 		point = self.transform.transformPoint_(event.locationInWindow())
@@ -212,20 +270,21 @@ class PresenterView(NSView):
 			return
 
 		action = annotation.mouseUpAction()
+
 		if type(action) == PDFActionNamed:
 			action_name = action.name()
-			target = {
-				kPDFActionNamedNextPage:     current_page+1,
-				kPDFActionNamedPreviousPage: current_page-1,
-				kPDFActionNamedFirstPage:    0,
-				kPDFActionNamedLastPage:     page_count-1,
-#				kPDFActionNamedGoBack:       ,
-#				kPDFActionNamedGoForward:    ,
+			action = {
+				kPDFActionNamedNextPage:     next_page,
+				kPDFActionNamedPreviousPage: prev_page,
+				kPDFActionNamedFirstPage:    home_page,
+				kPDFActionNamedLastPage:     last_page,
+				kPDFActionNamedGoBack:       back,
+				kPDFActionNamedGoForward:    forward,
 #				kPDFActionNamedGoToPage = 7,
 #				kPDFActionNamedFind = 8,
 #				kPDFActionNamedPrint = 9,
-			}.get(action_name, current_page)
-			goto_page(target)
+			}.get(action_name, nop)
+			action()
 			return
 
 		destination = annotation.destination()
@@ -294,7 +353,8 @@ presentation_window.setContentView_(presentation_view)
 presentation_window.setInitialFirstResponder_(presentation_view)
 
 presenter_window.makeKeyAndOrderFront_(nil)
-	
+
+
 # redisplay
 redisplay_timer = NSTimer.scheduledTimerWithTimeInterval_target_selector_userInfo_repeats_(
 	1.,
