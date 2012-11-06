@@ -22,6 +22,7 @@ from objc import *
 from Foundation import *
 from Cocoa import *
 from Quartz import *
+from WebKit import *
 
 
 # constants ##################################################################
@@ -248,6 +249,7 @@ class PresenterView(NSView):
 		
 		action = {
 			"f":                     toggle_fullscreen,
+			"w":                     toggle_presentation_view,
 			NSUpArrowFunctionKey:    prev_page,
 			NSLeftArrowFunctionKey:  prev_page,
 			NSDownArrowFunctionKey:  next_page,
@@ -290,6 +292,12 @@ class PresenterView(NSView):
 		destination = annotation.destination()
 		if destination:
 			goto_page(pdf.indexForPage_(destination.page()))
+			return
+		
+		url = annotation.URL()
+		if url:
+			web_view.mainFrame().loadRequest_(NSURLRequest.requestWithURL_(url))
+			toggle_presentation_view(web_view)
 
 
 # presentation ###############################################################
@@ -321,23 +329,6 @@ class PresentationView(NSView):
 
 # windows ####################################################################
 
-# presenter window
-presenter_window = NSWindow.alloc().initWithContentRect_styleMask_backing_defer_screen_(
-	PRESENTER_FRAME,
-	NSMiniaturizableWindowMask|NSResizableWindowMask|NSTitledWindowMask,
-	NSBackingStoreBuffered,
-	NO,
-	None,
-)
-presenter_window.setTitle_(name)
-	
-presenter_view = PresenterView.alloc().initWithFrame_(presenter_window.frame())
-presenter_window.setContentView_(presenter_view)
-presenter_window.setInitialFirstResponder_(presenter_view)
-presenter_window.makeFirstResponder_(presenter_view)
-presenter_window.center()
-
-
 # presentation window
 presentation_window = NSWindow.alloc().initWithContentRect_styleMask_backing_defer_screen_(
 	PRESENTER_FRAME,
@@ -349,10 +340,32 @@ presentation_window = NSWindow.alloc().initWithContentRect_styleMask_backing_def
 presentation_window.setTitle_(name)
 
 presentation_view = PresentationView.alloc().initWithFrame_(presentation_window.frame())
-presentation_window.setContentView_(presentation_view)
-presentation_window.setInitialFirstResponder_(presentation_view)
+web_view = WebView.alloc().initWithFrame_frameName_groupName_(presentation_window.frame(), nil, nil)
 
+def toggle_presentation_view(view=None):
+	if view is None:
+		view = presentation_view if presentation_window.contentView() ==  web_view else web_view
+	presentation_window.setContentView_(view)
+	presentation_window.setInitialFirstResponder_(view)
+toggle_presentation_view(presentation_view)
+
+
+# presenter window
+presenter_window = NSWindow.alloc().initWithContentRect_styleMask_backing_defer_screen_(
+	PRESENTER_FRAME,
+	NSMiniaturizableWindowMask|NSResizableWindowMask|NSTitledWindowMask,
+	NSBackingStoreBuffered,
+	NO,
+	None,
+)
+presenter_window.setTitle_(name)
+presenter_window.center()
 presenter_window.makeKeyAndOrderFront_(nil)
+
+presenter_view = PresenterView.alloc().initWithFrame_(presenter_window.frame())
+presenter_window.setContentView_(presenter_view)
+presenter_window.setInitialFirstResponder_(presenter_view)
+presenter_window.makeFirstResponder_(presenter_view)
 
 
 # redisplay
