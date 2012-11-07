@@ -64,8 +64,10 @@ for page_number in range(page_count):
 
 # page navigation ############################################################
 
+first_page, last_page = 0, page_count-1
+
 past_pages = []
-current_page = 0
+current_page = first_page
 future_pages = []
 
 def _goto(page):
@@ -74,17 +76,7 @@ def _goto(page):
 	toggle_web_view(visible=False)
 	redisplayer.display_()
 
-
-def goto_page(page):
-	page = min(max(0, page), page_count-1)
-	if page == current_page:
-		return
-	del future_pages[:]
-	past_pages.append(current_page)
-	_goto(page)
-
-
-def _push_pop_page(pop_pages, push_pages):
+def _pop_push_page(pop_pages, push_pages):
 	def action():
 		try:
 			page = pop_pages.pop()
@@ -94,21 +86,29 @@ def _push_pop_page(pop_pages, push_pages):
 		_goto(page)
 	return action
 
-back    = _push_pop_page(past_pages, future_pages)
-forward = _push_pop_page(future_pages, past_pages)
+
+back    = _pop_push_page(past_pages, future_pages)
+forward = _pop_push_page(future_pages, past_pages)
+
+def goto_page(page):
+	page = min(max(first_page, page), last_page)
+	if page == current_page:
+		return
+	
+	if future_pages and page == future_pages[-1]:
+		forward()
+	elif past_pages and page == past_pages[-1]:
+		back()
+	else:
+		del future_pages[:]
+		past_pages.append(current_page)
+		_goto(page)
 
 
-def next_page():
-	goto_page(current_page+1)
-
-def prev_page():
-	goto_page(current_page-1)
-
-def home_page():
-	goto_page(0)
-
-def last_page():
-	goto_page(page_count-1)
+def next_page(): goto_page(current_page+1)
+def prev_page(): goto_page(current_page-1)
+def home_page(): goto_page(first_page)
+def end_page():  goto_page(last_page)
 
 
 # handling redisplay #########################################################
@@ -122,17 +122,42 @@ redisplayer = Redisplayer.alloc().init()
 
 # handling full screens ######################################################
 
-fullscreen = False
 def toggle_fullscreen():
-	global fullscreen
-	for window, screen in reversed(zip(app.windows(), NSScreen.screens())):
+	for window, screen in reversed(zip(reversed(app.windows()),
+	                                   NSScreen.screens())):
 		view = window.contentView()
-		if fullscreen:
+		if view.isInFullScreenMode():
 			view.exitFullScreenModeWithOptions_({})
 		else:
 			view.enterFullScreenMode_withOptions_(screen, {}) 
 		window.makeFirstResponder_(view)
-	fullscreen = not fullscreen
+
+
+# presentation ###############################################################
+
+class SlideView(NSView):
+	def drawRect_(self, rect):
+		bounds = self.bounds()
+		width, height = bounds.size
+		
+		NSRectFillUsingOperation(bounds, NSCompositeClear)
+		
+		# current page
+		page = pdf.pageAtIndex_(current_page)
+		page_rect = page.boundsForBox_(kPDFDisplayBoxCropBox)
+		_, (w, h) = page_rect
+		r = min(width/w, height/h)
+		
+		transform = NSAffineTransform.transform()
+		transform.translateXBy_yBy_(width/2., height/2.)
+		transform.scaleXBy_yBy_(r, r)
+		transform.translateXBy_yBy_(-w/2., -h/2.)
+		transform.concat()
+
+		NSEraseRect(page_rect)
+		page.drawWithBox_(kPDFDisplayBoxCropBox)
+		transform.invert()
+		transform.concat()
 
 
 # presenter view #############################################################
@@ -245,7 +270,7 @@ class PresenterView(NSView):
 			NSDownArrowFunctionKey:  next_page,
 			NSRightArrowFunctionKey: next_page,
 			NSHomeFunctionKey:       home_page,
-			NSEndFunctionKey:        last_page,
+			NSEndFunctionKey:        end_page,
 			NSPageUpFunctionKey:     back,
 			NSPageDownFunctionKey:   forward,
 		}.get(c, nop)
@@ -269,12 +294,12 @@ class PresenterView(NSView):
 				kPDFActionNamedNextPage:     next_page,
 				kPDFActionNamedPreviousPage: prev_page,
 				kPDFActionNamedFirstPage:    home_page,
-				kPDFActionNamedLastPage:     last_page,
+				kPDFActionNamedLastPage:     end_page,
 				kPDFActionNamedGoBack:       back,
 				kPDFActionNamedGoForward:    forward,
-#				kPDFActionNamedGoToPage = 7,
-#				kPDFActionNamedFind = 8,
-#				kPDFActionNamedPrint = 9,
+#				kPDFActionNamedGoToPage:     nop,
+#				kPDFActionNamedFind:         nop,
+#				kPDFActionNamedPrint:        nop,
 			}.get(action_name, nop)
 			action()
 			return
@@ -290,65 +315,31 @@ class PresenterView(NSView):
 			toggle_web_view(visible=True)
 
 
-# presentation ###############################################################
-
-class SlideView(NSView):
-	def drawRect_(self, rect):
-		bounds = self.bounds()
-		width, height = bounds.size
-		
-		NSRectFillUsingOperation(bounds, NSCompositeClear)
-	
-		# current page
-		page = pdf.pageAtIndex_(current_page)
-		page_rect = page.boundsForBox_(kPDFDisplayBoxCropBox)
-		_, (w, h) = page_rect
-		r = min(width/w, height/h)
-	
-		transform = NSAffineTransform.transform()
-		transform.translateXBy_yBy_(width/2., height/2.)
-		transform.scaleXBy_yBy_(r, r)
-		transform.translateXBy_yBy_(-w/2., -h/2.)
-		transform.concat()
-
-		NSEraseRect(page_rect)
-		page.drawWithBox_(kPDFDisplayBoxCropBox)
-		transform.invert()
-		transform.concat()
-
-
 # windows ####################################################################
 
-# presenter window
-presenter_window = NSWindow.alloc().initWithContentRect_styleMask_backing_defer_screen_(
-	PRESENTER_FRAME,
-	NSMiniaturizableWindowMask|NSResizableWindowMask|NSTitledWindowMask,
-	NSBackingStoreBuffered,
-	NO,
-	None,
-)
-presenter_window.setTitle_(name)
-presenter_window.center()
-presenter_window.makeKeyAndOrderFront_(nil)
+def create_window(title, Window=NSWindow):
+	window = Window.alloc().initWithContentRect_styleMask_backing_defer_screen_(
+		PRESENTER_FRAME,
+		NSMiniaturizableWindowMask|NSResizableWindowMask|NSTitledWindowMask,
+		NSBackingStoreBuffered,
+		NO,
+		None,
+	)
+	window.setTitle_(title)
+	window.makeKeyAndOrderFront_(nil)
+	return window
 
-presenter_view = PresenterView.alloc().initWithFrame_(presenter_window.frame())
-presenter_window.setContentView_(presenter_view)
-presenter_window.setInitialFirstResponder_(presenter_view)
-presenter_window.makeFirstResponder_(presenter_view)
+def create_view(window, View=NSView):
+	view = View.alloc().initWithFrame_(window.frame())
+	window.setContentView_(view)
+	window.setInitialFirstResponder_(view)
+	return view
 
 
 # presentation window
-presentation_window = NSWindow.alloc().initWithContentRect_styleMask_backing_defer_screen_(
-	PRESENTER_FRAME,
-	NSMiniaturizableWindowMask|NSResizableWindowMask|NSTitledWindowMask,
-	NSBackingStoreBuffered,
-	NO,
-	None,
-)
-presentation_window.setTitle_(name)
-presentation_window.makeKeyAndOrderFront_(nil)
 
-presentation_view = NSView.alloc().initWithFrame_(presentation_window.frame())
+presentation_window = create_window(name)
+presentation_view   = create_view(presentation_window)
 
 slide_view = SlideView.alloc().initWithFrame_(presentation_view.frame())
 web_view = WebView.alloc().initWithFrame_frameName_groupName_(presentation_view.frame(), nil, nil)
@@ -364,17 +355,21 @@ def toggle_web_view(visible=None):
 	web_view.setHidden_(not visible)
 toggle_web_view(False)
 
-presentation_window.setContentView_(presentation_view)
-presentation_window.setInitialFirstResponder_(presentation_view)
+
+# presenter window
+
+presenter_window = create_window(name)
+presenter_view   = create_view(presenter_window, PresenterView)
+
+presenter_window.center()
+presenter_window.makeFirstResponder_(presenter_view)
 
 
-# redisplay
+# main loop ##################################################################
+
 redisplay_timer = NSTimer.scheduledTimerWithTimeInterval_target_selector_userInfo_repeats_(
 	1.,
 	redisplayer, "display:",
 	nil, YES)
-
-
-# main loop ##################################################################
 
 sys.exit(app.run())
