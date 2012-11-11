@@ -74,7 +74,6 @@ def _goto(page):
 	global current_page
 	current_page = page
 	toggle_web_view(visible=False)
-	redisplayer.display_()
 
 def _pop_push_page(pop_pages, push_pages):
 	def action():
@@ -163,6 +162,9 @@ class SlideView(NSView):
 # presenter view #############################################################
 
 class PresenterView(NSView):
+	absolute_time = False
+	start_time = time.time()
+	
 	def drawRect_(self, rect):
 		bounds = self.bounds()
 		width, height = bounds.size
@@ -201,8 +203,12 @@ class PresenterView(NSView):
 		
 
 		# time
-		now = NSString.stringWithString_(time.strftime("%H:%M:%S"))
-		now.drawAtPoint_withAttributes_((margin, height-margin*2), {
+		if self.absolute_time:
+			clock = time.localtime()
+		else:
+			clock = time.gmtime(time.time() - self.start_time)
+		clock = NSString.stringWithString_(time.strftime("%H:%M:%S", clock))
+		clock.drawAtPoint_withAttributes_((margin, height-margin*2), {
 			NSFontAttributeName:            NSFont.labelFontOfSize_(margin),
 			NSForegroundColorAttributeName: NSColor.whiteColor(),
 		})
@@ -259,23 +265,32 @@ class PresenterView(NSView):
 	
 	def keyDown_(self, event):
 		c = event.characters()
-		if c == "q":
+		if c == "q": # quit
 			app.terminate_(self)
 		
-		action = {
-			"f":                     toggle_fullscreen,
-			"w":                     toggle_web_view,
-			NSUpArrowFunctionKey:    prev_page,
-			NSLeftArrowFunctionKey:  prev_page,
-			NSDownArrowFunctionKey:  next_page,
-			NSRightArrowFunctionKey: next_page,
-			NSHomeFunctionKey:       home_page,
-			NSEndFunctionKey:        end_page,
-			NSPageUpFunctionKey:     back,
-			NSPageDownFunctionKey:   forward,
-		}.get(c, nop)
-		action()
+		elif c == "t": # switch time representation
+			self.absolute_time = not self.absolute_time
+
+		elif c == "z": # reset timer
+			self.start_time = time.time()
 		
+		else:
+			action = {
+				"f":                     toggle_fullscreen,
+				"w":                     toggle_web_view,
+				NSUpArrowFunctionKey:    prev_page,
+				NSLeftArrowFunctionKey:  prev_page,
+				NSDownArrowFunctionKey:  next_page,
+				NSRightArrowFunctionKey: next_page,
+				NSHomeFunctionKey:       home_page,
+				NSEndFunctionKey:        end_page,
+				NSPageUpFunctionKey:     back,
+				NSPageDownFunctionKey:   forward,
+			}.get(c, nop)
+			action()
+		
+		redisplayer.display_()
+	
 	
 	def mouseUp_(self, event):
 		point = self.transform.transformPoint_(event.locationInWindow())
@@ -287,6 +302,8 @@ class PresenterView(NSView):
 			return
 
 		action = annotation.mouseUpAction()
+		destination = annotation.destination()
+		url = annotation.URL()
 
 		if type(action) == PDFActionNamed:
 			action_name = action.name()
@@ -302,17 +319,14 @@ class PresenterView(NSView):
 #				kPDFActionNamedPrint:        nop,
 			}.get(action_name, nop)
 			action()
-			return
 
-		destination = annotation.destination()
-		if destination:
+		elif destination:
 			goto_page(pdf.indexForPage_(destination.page()))
-			return
 		
-		url = annotation.URL()
-		if url:
+		elif url:
 			web_view.mainFrame().loadRequest_(NSURLRequest.requestWithURL_(url))
-			toggle_web_view(visible=True)
+
+		redisplayer.display_()
 
 
 # windows ####################################################################
@@ -354,6 +368,12 @@ def toggle_web_view(visible=None):
 		visible = web_view.isHidden()
 	web_view.setHidden_(not visible)
 toggle_web_view(False)
+
+class WebFrameLoadDelegate(NSObject):
+	def webView_didFinishLoadForFrame_(self, view, frame):
+		toggle_web_view(visible=True)
+web_frame_load_delegate = WebFrameLoadDelegate.alloc().init()
+web_view.setFrameLoadDelegate_(web_frame_load_delegate)
 
 
 # presenter window
