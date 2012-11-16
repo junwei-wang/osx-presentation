@@ -366,6 +366,7 @@ for view in [slide_view, web_view]:
 def toggle_web_view(visible=None):
 	if visible is None:
 		visible = web_view.isHidden()
+	slide_view.setHidden_(visible)
 	web_view.setHidden_(not visible)
 toggle_web_view(False)
 
