@@ -162,6 +162,7 @@ class SlideView(NSView):
 # presenter view #############################################################
 
 class PresenterView(NSView):
+	duration = 1.
 	absolute_time = False
 	start_time = time.time()
 	
@@ -206,7 +207,7 @@ class PresenterView(NSView):
 		if self.absolute_time:
 			clock = time.localtime()
 		else:
-			clock = time.gmtime(time.time() - self.start_time)
+			clock = time.gmtime(abs(self.duration - (time.time() - self.start_time)))
 		clock = NSString.stringWithString_(time.strftime("%H:%M:%S", clock))
 		clock.drawAtPoint_withAttributes_((margin, height-margin*2), {
 			NSFontAttributeName:            NSFont.labelFontOfSize_(margin),
@@ -273,6 +274,18 @@ class PresenterView(NSView):
 
 		elif c == "z": # reset timer
 			self.start_time = time.time()
+		
+		elif c == "[":
+			self.duration -= 60.
+		
+		elif c == "]":
+			self.duration += 60.
+
+		elif c == "{":
+			self.duration -= 600.
+		
+		elif c == "}":
+			self.duration += 600.
 		
 		else:
 			action = {
