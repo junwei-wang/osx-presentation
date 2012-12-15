@@ -15,6 +15,7 @@ Licence: GPLv3 or higher <http://www.gnu.org/licenses/gpl.html>
 import sys
 import os
 import time
+import select
 import getopt
 
 from collections import defaultdict
@@ -134,15 +135,6 @@ def home_page(): goto_page(first_page)
 def end_page():  goto_page(last_page)
 
 
-# handling redisplay #########################################################
-
-class Redisplayer(NSObject):
-	def display_(self, timer=None):
-		for window in app.windows():
-			window.contentView().setNeedsDisplay_(True)
-redisplayer = Redisplayer.alloc().init()
-
-
 # handling full screens ######################################################
 
 def toggle_fullscreen():
@@ -181,6 +173,31 @@ class SlideView(NSView):
 		page.drawWithBox_(kPDFDisplayBoxCropBox)
 		transform.invert()
 		transform.concat()
+
+
+class MessageView(NSView):
+	_input_lines = [""]
+	
+	def last_input(self):
+		while True:
+			ready, _, _ = select.select([sys.stdin], [], [], 0)
+			if	not ready:
+				break
+			line = sys.stdin.readline().decode('utf-8')
+			self._input_lines.append(line.rstrip())
+		return self._input_lines[-1]
+	
+	def drawRect_(self, rect):
+		text = NSString.stringWithString_(self.last_input())
+		for attr in [{
+			NSFontAttributeName: NSFont.labelFontOfSize_(30),
+			NSStrokeColorAttributeName:     NSColor.colorWithDeviceWhite_alpha_(0., .75),
+			NSStrokeWidthAttributeName:     20.,
+		}, {
+			NSFontAttributeName: NSFont.labelFontOfSize_(30),
+			NSForegroundColorAttributeName: NSColor.colorWithDeviceWhite_alpha_(1., .75),
+		}]:
+			text.drawAtPoint_withAttributes_((8, 4.), attr)
 
 
 # presenter view #############################################################
@@ -326,7 +343,7 @@ class PresenterView(NSView):
 			}.get(c, nop)
 			action()
 		
-		redisplayer.display_()
+		refresher.refresh_()
 	
 	
 	def mouseUp_(self, event):
@@ -363,10 +380,10 @@ class PresenterView(NSView):
 		elif url:
 			web_view.mainFrame().loadRequest_(NSURLRequest.requestWithURL_(url))
 
-		redisplayer.display_()
+		refresher.refresh_()
 
 
-# windows ####################################################################
+# window utils ###############################################################
 
 def create_window(title, Window=NSWindow):
 	window = Window.alloc().initWithContentRect_styleMask_backing_defer_screen_(
@@ -386,22 +403,26 @@ def create_view(window, View=NSView):
 	window.setInitialFirstResponder_(view)
 	return view
 
-def add_subview(view, subview):
-	subview.setAutoresizingMask_(NSViewWidthSizable|NSViewHeightSizable)
+def add_subview(view, subview, autoresizing_mask=NSViewWidthSizable|NSViewHeightSizable):
+	subview.setAutoresizingMask_(autoresizing_mask)
 	subview.setFrameOrigin_((0, 0))
 	view.addSubview_(subview)
 
-# presentation window
+
+# presentation window ########################################################
 
 presentation_window = create_window(name)
 presentation_view   = presentation_window.contentView()
+frame = presentation_view.frame()
 
-slide_view = SlideView.alloc().initWithFrame_(presentation_view.frame())
-web_view = WebView.alloc().initWithFrame_frameName_groupName_(presentation_view.frame(), nil, nil)
+# slides
 
-for view in [slide_view, web_view]:
-	add_subview(presentation_view, view)
+slide_view = SlideView.alloc().initWithFrame_(frame)
+add_subview(presentation_view, slide_view)
 
+# web view
+
+web_view = WebView.alloc().initWithFrame_frameName_groupName_(frame, nil, nil)
 def toggle_web_view(visible=None):
 	if visible is None:
 		visible = web_view.isHidden()
@@ -415,8 +436,16 @@ class WebFrameLoadDelegate(NSObject):
 web_frame_load_delegate = WebFrameLoadDelegate.alloc().init()
 web_view.setFrameLoadDelegate_(web_frame_load_delegate)
 
+add_subview(presentation_view, web_view)
 
-# presenter window
+# message view
+
+frame.size.height = 40
+message_view = MessageView.alloc().initWithFrame_(frame)
+add_subview(presentation_view, message_view, NSViewWidthSizable)
+
+
+# presenter window ###########################################################
 
 presenter_window = create_window(name)
 presenter_view   = create_view(presenter_window, PresenterView)
@@ -427,9 +456,15 @@ presenter_window.makeFirstResponder_(presenter_view)
 
 # main loop ##################################################################
 
-redisplay_timer = NSTimer.scheduledTimerWithTimeInterval_target_selector_userInfo_repeats_(
+class Refresher(NSObject):
+	def refresh_(self, timer=None):
+		for window in app.windows():
+			window.contentView().setNeedsDisplay_(True)
+refresher = Refresher.alloc().init()
+
+refresher_timer = NSTimer.scheduledTimerWithTimeInterval_target_selector_userInfo_repeats_(
 	1.,
-	redisplayer, "display:",
+	refresher, "refresh:",
 	nil, YES)
 
 sys.exit(app.run())
