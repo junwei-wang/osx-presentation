@@ -15,6 +15,7 @@ Licence: GPLv3 or higher <http://www.gnu.org/licenses/gpl.html>
 import sys
 import os
 import time
+import getopt
 
 from collections import defaultdict
 
@@ -27,14 +28,37 @@ from WebKit import *
 
 # constants ##################################################################
 
-PRESENTER_FRAME = ((100., 100.), (800., 600.))
+PRESENTER_FRAME = ((100., 100.), (1024., 768.))
 def nop(): pass
 
 
 # handling args ##############################################################
 
+def exit_usage(name, message=None, code=0):
+	from textwrap import dedent
+	usage = dedent("""\
+	Usage: %s [-h] <doc.pdf>
+		-h --help         this help message
+		<doc.pdf>         file to present
+	""")
+	if message:
+		sys.stderr.write("%s\n" % message)
+	sys.stderr.write(usage % (name,))
+	sys.exit(code)
+
 name, args = sys.argv[0], sys.argv[1:]
-assert len(args) == 1, "usage"
+
+try:
+	options, args = getopt.getopt(args, "h", ["help"])
+except getopt.GetoptError as message:
+	exit_usage(name, message, 1)
+
+for opt, value in options:
+	if opt in ["-h", "--help"]:
+		exit_usage(name)
+
+if len(args) != 1:
+	exit_usage(name, "exactly one argument is expected", 1)
 
 path = args[0]
 
@@ -115,7 +139,7 @@ def end_page():  goto_page(last_page)
 class Redisplayer(NSObject):
 	def display_(self, timer=None):
 		for window in app.windows():
-			window.display()
+			window.contentView().setNeedsDisplay_(True)
 redisplayer = Redisplayer.alloc().init()
 
 
@@ -362,19 +386,21 @@ def create_view(window, View=NSView):
 	window.setInitialFirstResponder_(view)
 	return view
 
+def add_subview(view, subview):
+	subview.setAutoresizingMask_(NSViewWidthSizable|NSViewHeightSizable)
+	subview.setFrameOrigin_((0, 0))
+	view.addSubview_(subview)
 
 # presentation window
 
 presentation_window = create_window(name)
-presentation_view   = create_view(presentation_window)
+presentation_view   = presentation_window.contentView()
 
 slide_view = SlideView.alloc().initWithFrame_(presentation_view.frame())
 web_view = WebView.alloc().initWithFrame_frameName_groupName_(presentation_view.frame(), nil, nil)
 
 for view in [slide_view, web_view]:
-	view.setAutoresizingMask_(NSViewWidthSizable|NSViewHeightSizable)
-	view.setFrameOrigin_((0, 0))
-	presentation_view.addSubview_(view)
+	add_subview(presentation_view, view)
 
 def toggle_web_view(visible=None):
 	if visible is None:
