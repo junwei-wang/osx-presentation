@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.6
+#! /usr/bin/env python2.6
 # -*- coding: utf-8 -*-
 
 
@@ -38,8 +38,9 @@ def nop(): pass
 def exit_usage(name, message=None, code=0):
 	from textwrap import dedent
 	usage = dedent("""\
-	Usage: %s [-h] <doc.pdf>
+	Usage: %s [-hf] <doc.pdf>
 		-h --help         this help message
+		-f --feed         enable reading feed on stdin
 		<doc.pdf>         file to present
 	""")
 	if message:
@@ -50,13 +51,17 @@ def exit_usage(name, message=None, code=0):
 name, args = sys.argv[0], sys.argv[1:]
 
 try:
-	options, args = getopt.getopt(args, "h", ["help"])
+	options, args = getopt.getopt(args, "hf", ["help", "feed"])
 except getopt.GetoptError as message:
 	exit_usage(name, message, 1)
+
+show_feed = False
 
 for opt, value in options:
 	if opt in ["-h", "--help"]:
 		exit_usage(name)
+	elif opt in ["-f", "--feed"]:
+		show_feed = True
 
 if len(args) != 1:
 	exit_usage(name, "exactly one argument is expected", 1)
@@ -176,19 +181,44 @@ class SlideView(NSView):
 
 
 class MessageView(NSView):
-	_input_lines = [""]
+	fps = 20. # frame per seconds for animation
+	pps = 40. # pixels per seconds for scrolling
+
+	input_lines = [u"…"]
+	should_check = True
 	
-	def last_input(self):
+	def initWithFrame_(self, frame):
+		assert NSView.initWithFrame_(self, frame) == self
+		self.redisplay_timer = NSTimer.scheduledTimerWithTimeInterval_target_selector_userInfo_repeats_(
+			1./self.fps,
+			self, "redisplay:", nil,
+			True
+		)
+		return self
+
+	def redisplay_(self, timer):
+		self.setNeedsDisplay_(True)
+	
+	def check_input(self):
 		while True:
 			ready, _, _ = select.select([sys.stdin], [], [], 0)
-			if	not ready:
+			if not ready:
 				break
 			line = sys.stdin.readline().decode('utf-8')
-			self._input_lines.append(line.rstrip())
-		return self._input_lines[-1]
+			self.input_lines.append(line.rstrip())
 	
 	def drawRect_(self, rect):
-		text = NSString.stringWithString_(self.last_input())
+		if self.should_check:
+			self.check_input()
+			try:
+				self.text = self.input_lines.pop(0)
+			except IndexError:
+				pass
+			else:
+				self.start = time.time()
+				self.should_check = False
+		text = NSString.stringWithString_(self.text)
+		x = rect.size.width - self.pps*(time.time()-self.start)
 		for attr in [{
 			NSFontAttributeName: NSFont.labelFontOfSize_(30),
 			NSStrokeColorAttributeName:     NSColor.colorWithDeviceWhite_alpha_(0., .75),
@@ -197,7 +227,10 @@ class MessageView(NSView):
 			NSFontAttributeName: NSFont.labelFontOfSize_(30),
 			NSForegroundColorAttributeName: NSColor.colorWithDeviceWhite_alpha_(1., .75),
 		}]:
-			text.drawAtPoint_withAttributes_((8, 4.), attr)
+			text.drawAtPoint_withAttributes_((x, 4.), attr)
+		tw, _ = text.sizeWithAttributes_(attr)
+		if x < -tw:
+			self.should_check = True
 
 
 # presenter view #############################################################
@@ -440,9 +473,10 @@ add_subview(presentation_view, web_view)
 
 # message view
 
-frame.size.height = 40
-message_view = MessageView.alloc().initWithFrame_(frame)
-add_subview(presentation_view, message_view, NSViewWidthSizable)
+if show_feed:
+	frame.size.height = 40
+	message_view = MessageView.alloc().initWithFrame_(frame)
+	add_subview(presentation_view, message_view, NSViewWidthSizable)
 
 
 # presenter window ###########################################################
