@@ -17,6 +17,7 @@ import os
 import time
 import select
 import getopt
+import textwrap
 
 from collections import defaultdict
 
@@ -36,12 +37,12 @@ def nop(): pass
 # handling args ##############################################################
 
 def exit_usage(name, message=None, code=0):
-	from textwrap import dedent
-	usage = dedent("""\
+	usage = textwrap.dedent("""\
 	Usage: %s [-hf] <doc.pdf>
-		-h --help         this help message
-		-f --feed         enable reading feed on stdin
-		<doc.pdf>         file to present
+		-h --help          this help message
+		-d --duration <t>  duration of the talk in minutes
+		-f --feed          enable reading feed on stdin
+		<doc.pdf>          file to present
 	""")
 	if message:
 		sys.stderr.write("%s\n" % message)
@@ -51,15 +52,18 @@ def exit_usage(name, message=None, code=0):
 name, args = sys.argv[0], sys.argv[1:]
 
 try:
-	options, args = getopt.getopt(args, "hf", ["help", "feed"])
+	options, args = getopt.getopt(args, "hd:f", ["help", "duration=", "feed"])
 except getopt.GetoptError as message:
 	exit_usage(name, message, 1)
 
 show_feed = False
+presentation_duration = 0
 
 for opt, value in options:
 	if opt in ["-h", "--help"]:
 		exit_usage(name)
+	elif opt in ["-d", "--duration"]:
+		presentation_duration = int(value)
 	elif opt in ["-f", "--feed"]:
 		show_feed = True
 
@@ -67,6 +71,29 @@ if len(args) != 1:
 	exit_usage(name, "exactly one argument is expected", 1)
 
 path = args[0]
+
+
+# help #######################################################################
+
+def print_help():
+	sys.stderr.write(textwrap.dedent("""\
+		'h'          show this help
+		'q'          quit
+		'w'          toggle web view
+		'f'          toggle fullscreen
+		up, left     previous page
+		down, right  next page
+		home         first page
+		end          last page
+		page up      back
+		page down    forward
+		't'          switch between clock and timer
+		'z'          set origin for timer
+		']'          add 1 minute to planned time
+		'['          sub 1 minute
+		'}'          add 10 minutes
+		'{'          sub 10 minutes
+	"""))
 
 
 # application init ###########################################################
@@ -236,7 +263,7 @@ class MessageView(NSView):
 # presenter view #############################################################
 
 class PresenterView(NSView):
-	duration = 1.
+	duration = presentation_duration * 60. + 1.
 	absolute_time = False
 	start_time = time.time()
 	
@@ -363,6 +390,7 @@ class PresenterView(NSView):
 		
 		else:
 			action = {
+				"h":                     print_help,
 				"f":                     toggle_fullscreen,
 				"w":                     toggle_web_view,
 				NSUpArrowFunctionKey:    prev_page,
