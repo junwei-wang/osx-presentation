@@ -5,7 +5,7 @@
 """
 A PDF presentation tool for Mac OS X
 
-Copyright (c) 2011, IIHM/LIG - Renaud Blanch <http://iihm.imag.fr/blanch/>
+Copyright (c) 2011--2013, IIHM/LIG - Renaud Blanch <http://iihm.imag.fr/blanch/>
 Licence: GPLv3 or higher <http://www.gnu.org/licenses/gpl.html>
 """
 
@@ -38,7 +38,7 @@ def nop(): pass
 
 def exit_usage(name, message=None, code=0):
 	usage = textwrap.dedent("""\
-	Usage: %s [-hf] <doc.pdf>
+	Usage: %s [-hd:f] <doc.pdf>
 		-h --help          this help message
 		-d --duration <t>  duration of the talk in minutes
 		-f --feed          enable reading feed on stdin
