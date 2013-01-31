@@ -20,7 +20,7 @@ A multi-screen presentation tool for pdf on the mac, with some (more or less) us
 Usage
 -----
 
-.. code::
+::
 
 	Usage: ./presentation.py [-hd:f] <doc.pdf>
 		-h --help          this help message
@@ -32,7 +32,7 @@ Usage
 Key bindings
 ------------
 
-.. code::
+::
 
 	'h'          show this help
 	'q'          quit
