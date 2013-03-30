@@ -57,6 +57,10 @@ def exit_usage(name, message=None, code=0):
 
 name, args = sys.argv[0], sys.argv[1:]
 
+if args and args[0].startswith("-psn"):
+	# we have been launched by the finder, ignore this command line switch
+	args = args[1:]
+
 try:
 	options, args = getopt.getopt(args, "hd:f", ["help", "duration=", "feed"])
 except getopt.GetoptError as message:
