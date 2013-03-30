@@ -28,6 +28,12 @@ from Quartz import *
 from WebKit import *
 
 
+# application init ###########################################################
+
+app = NSApplication.sharedApplication()
+app.activateIgnoringOtherApps_(True)
+
+
 # constants ##################################################################
 
 PRESENTER_FRAME = ((100., 100.), (1024., 768.))
@@ -67,6 +73,12 @@ for opt, value in options:
 	elif opt in ["-f", "--feed"]:
 		show_feed = True
 
+if not args:
+	dialog = NSOpenPanel.openPanel()
+	dialog.setAllowedFileTypes_(["pdf"])
+	dialog.runModal()
+	args = [url.path() for url in dialog.URLs()]
+
 if len(args) != 1:
 	exit_usage(name, "exactly one argument is expected", 1)
 
@@ -94,13 +106,6 @@ def print_help():
 		'}'          add 10 minutes
 		'{'          sub 10 minutes
 	"""))
-
-
-# application init ###########################################################
-
-pool = NSAutoreleasePool.alloc().init()
-app = NSApplication.sharedApplication()
-app.activateIgnoringOtherApps_(True)
 
 
 # opening presentation #######################################################
