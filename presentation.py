@@ -1,4 +1,4 @@
-#! /usr/bin/env python2.6
+#! /usr/bin/env python
 # -*- coding: utf-8 -*-
 
 
@@ -34,62 +34,11 @@ app = NSApplication.sharedApplication()
 app.activateIgnoringOtherApps_(True)
 
 
-# constants ##################################################################
+# constants and helpers ######################################################
 
 PRESENTER_FRAME = ((100., 100.), (1024., 768.))
+
 def nop(): pass
-
-
-# handling args ##############################################################
-
-def exit_usage(name, message=None, code=0):
-	usage = textwrap.dedent("""\
-	Usage: %s [-hd:f] <doc.pdf>
-		-h --help          this help message
-		-d --duration <t>  duration of the talk in minutes
-		-f --feed          enable reading feed on stdin
-		<doc.pdf>          file to present
-	""")
-	if message:
-		sys.stderr.write("%s\n" % message)
-	sys.stderr.write(usage % (name,))
-	sys.exit(code)
-
-name, args = sys.argv[0], sys.argv[1:]
-
-if args and args[0].startswith("-psn"):
-	# we have been launched by the finder, ignore this command line switch
-	args = args[1:]
-
-try:
-	options, args = getopt.getopt(args, "hd:f", ["help", "duration=", "feed"])
-except getopt.GetoptError as message:
-	exit_usage(name, message, 1)
-
-show_feed = False
-presentation_duration = 0
-
-for opt, value in options:
-	if opt in ["-h", "--help"]:
-		exit_usage(name)
-	elif opt in ["-d", "--duration"]:
-		presentation_duration = int(value)
-	elif opt in ["-f", "--feed"]:
-		show_feed = True
-
-if not args:
-	dialog = NSOpenPanel.openPanel()
-	dialog.setAllowedFileTypes_(["pdf"])
-	dialog.runModal()
-	args = [url.path() for url in dialog.URLs()]
-
-if len(args) != 1:
-	exit_usage(name, "exactly one argument is expected", 1)
-
-path = args[0]
-
-
-# help #######################################################################
 
 def print_help():
 	sys.stderr.write(textwrap.dedent("""\
@@ -112,24 +61,74 @@ def print_help():
 	"""))
 
 
+# handling args ##############################################################
+
+name, args = sys.argv[0], sys.argv[1:]
+
+if args and args[0].startswith("-psn"):
+	# we have been launched by the finder, ignore this command line switch
+	args = args[1:]
+
+
+def exit_usage(message=None, code=0):
+	usage = textwrap.dedent("""\
+	Usage: %s [-hd:f] <doc.pdf>
+		-h --help          this help message
+		-d --duration <t>  duration of the talk in minutes
+		-f --feed          enable reading feed on stdin
+		<doc.pdf>          file to present
+	""" % name)
+	if message:
+		sys.stderr.write("%s\n" % message)
+	sys.stderr.write(usage)
+	sys.exit(code)
+
+
+# options
+
+try:
+	options, args = getopt.getopt(args, "hd:f", ["help", "duration=", "feed"])
+except getopt.GetoptError as message:
+	exit_usage(message, 1)
+
+show_feed = False
+presentation_duration = 0
+
+for opt, value in options:
+	if opt in ["-h", "--help"]:
+		exit_usage()
+	elif opt in ["-d", "--duration"]:
+		presentation_duration = int(value)
+	elif opt in ["-f", "--feed"]:
+		show_feed = True
+
+
+# args
+
+if len(args) > 1:
+	exit_usage("no more than one argument is expected", 1)
+
+if args:
+	url = NSURL.fileURLWithPath_(args[0])
+else:
+	dialog = NSOpenPanel.openPanel()
+	dialog.setAllowedFileTypes_(["pdf"])
+	if dialog.runModal() == NSFileHandlingPanelOKButton:
+		url = dialog.URLs()[0]
+	else:
+		exit_usage("please select a pdf file", 1)
+
+
 # opening presentation #######################################################
 
-url = NSURL.fileURLWithPath_(path)
 pdf = PDFDocument.alloc().initWithURL_(url)
+if pdf is None:
+	exit_usage("'%s' does not seem to be a pdf." % url.path(), 1)
+
+
+# page navigation
 
 page_count = pdf.pageCount()
-
-notes = defaultdict(list)
-for page_number in range(page_count):
-	page = pdf.pageAtIndex_(page_number)
-	page.setDisplaysAnnotations_(False)
-	for annotation in page.annotations():
-		if type(annotation) == PDFAnnotationText:
-			notes[page_number].append(annotation.contents())
-
-
-# page navigation ############################################################
-
 first_page, last_page = 0, page_count-1
 
 past_pages = []
@@ -174,6 +173,17 @@ def next_page(): goto_page(current_page+1)
 def prev_page(): goto_page(current_page-1)
 def home_page(): goto_page(first_page)
 def end_page():  goto_page(last_page)
+
+
+# notes
+
+notes = defaultdict(list)
+for page_number in range(page_count):
+	page = pdf.pageAtIndex_(page_number)
+	page.setDisplaysAnnotations_(False)
+	for annotation in page.annotations():
+		if type(annotation) == PDFAnnotationText:
+			notes[page_number].append(annotation.contents())
 
 
 # handling full screens ######################################################
