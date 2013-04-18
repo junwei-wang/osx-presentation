@@ -195,7 +195,7 @@ def toggle_fullscreen():
 		if view.isInFullScreenMode():
 			view.exitFullScreenModeWithOptions_({})
 		else:
-			view.enterFullScreenMode_withOptions_(screen, {}) 
+			view.enterFullScreenMode_withOptions_(screen, {})
 		window.makeFirstResponder_(view)
 
 

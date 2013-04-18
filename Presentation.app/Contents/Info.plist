@@ -28,6 +28,9 @@
 
     <key>CFBundleVersion</key>
     <string>1.0.0</string>
+
+    <key>CFBundleIconFile</key>
+    <string>Presentation</string>
 </dict>
 
 </plist>
