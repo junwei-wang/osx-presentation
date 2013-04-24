@@ -114,7 +114,7 @@ else:
 	dialog = NSOpenPanel.openPanel()
 	dialog.setAllowedFileTypes_(["pdf"])
 	if dialog.runModal() == NSFileHandlingPanelOKButton:
-		url = dialog.URLs()[0]
+		url, = dialog.URLs()
 	else:
 		exit_usage("please select a pdf file", 1)
 
@@ -122,7 +122,7 @@ else:
 # opening presentation #######################################################
 
 pdf = PDFDocument.alloc().initWithURL_(url)
-if pdf is None:
+if not pdf:
 	exit_usage("'%s' does not seem to be a pdf." % url.path(), 1)
 
 
@@ -184,19 +184,6 @@ for page_number in range(page_count):
 	for annotation in page.annotations():
 		if type(annotation) == PDFAnnotationText:
 			notes[page_number].append(annotation.contents())
-
-
-# handling full screens ######################################################
-
-def toggle_fullscreen():
-	for window, screen in reversed(zip(reversed(app.windows()),
-	                                   NSScreen.screens())):
-		view = window.contentView()
-		if view.isInFullScreenMode():
-			view.exitFullScreenModeWithOptions_({})
-		else:
-			view.enterFullScreenMode_withOptions_(screen, {})
-		window.makeFirstResponder_(view)
 
 
 # presentation ###############################################################
@@ -533,6 +520,19 @@ presenter_view   = create_view(presenter_window, PresenterView)
 
 presenter_window.center()
 presenter_window.makeFirstResponder_(presenter_view)
+
+
+# handling full screens ######################################################
+
+def toggle_fullscreen():
+	for window, screen in reversed(zip(reversed(app.windows()),
+	                                   NSScreen.screens())):
+		view = window.contentView()
+		if view.isInFullScreenMode():
+			view.exitFullScreenModeWithOptions_({})
+		else:
+			view.enterFullScreenMode_withOptions_(screen, {})
+		window.makeFirstResponder_(view)
 
 
 # main loop ##################################################################
