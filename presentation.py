@@ -19,6 +19,7 @@ import select
 import getopt
 import textwrap
 
+from math import exp
 from collections import defaultdict
 
 from objc import *
@@ -93,6 +94,7 @@ except getopt.GetoptError as message:
 
 show_feed = False
 presentation_duration = 0
+bbox = NSAffineTransform.transform()
 
 for opt, value in options:
 	if opt in ["-h", "--help"]:
@@ -207,6 +209,7 @@ class SlideView(NSView):
 		transform.scaleXBy_yBy_(r, r)
 		transform.translateXBy_yBy_(-w/2., -h/2.)
 		transform.concat()
+		bbox.concat()
 
 		NSEraseRect(page_rect)
 		page.drawWithBox_(kPDFDisplayBoxCropBox)
@@ -295,7 +298,10 @@ class PresenterView(NSView):
 		transform.scaleXBy_yBy_(r, r)
 		transform.translateXBy_yBy_(0., -h/2.)
 		transform.concat()
-				
+		
+		NSGraphicsContext.saveGraphicsState()
+		
+		bbox.concat()
 		NSEraseRect(page_rect)
 		self.page.drawWithBox_(kPDFDisplayBoxCropBox)
 		
@@ -307,8 +313,11 @@ class PresenterView(NSView):
 				NSFrameRectWithWidth(annotation.bounds(), .5)
 
 		self.transform = transform
+		self.transform.prependTransform_(bbox)
 		self.resetCursorRects()
 		self.transform.invert()
+
+		NSGraphicsContext.restoreGraphicsState()
 
 		# screen border
 		NSColor.whiteColor().setFill()
@@ -360,6 +369,7 @@ class PresenterView(NSView):
 		transform.scaleXBy_yBy_(r, r)
 		transform.translateXBy_yBy_(0., -h/2.)
 		transform.concat()
+		bbox.concat()
 
 		NSEraseRect(page_rect)
 		page.drawWithBox_(kPDFDisplayBoxCropBox)
@@ -378,6 +388,12 @@ class PresenterView(NSView):
 	
 	
 	def keyDown_(self, event):
+		if (event.modifierFlags() & NSAlternateKeyMask):
+			c = event.charactersIgnoringModifiers()
+			if c == "i": # reset bbox to identity
+				global bbox
+				bbox = NSAffineTransform.transform()
+		
 		c = event.characters()
 
 		if c in ["q", chr(27)]: # quit
@@ -419,7 +435,31 @@ class PresenterView(NSView):
 		
 		refresher.refresh_()
 
+	def scrollWheel_(self, event):
+		if not (event.modifierFlags() & NSAlternateKeyMask):
+			return
+		p = event.locationInWindow()
+		p = self.transform.transformPoint_(p)
+		bbox.translateXBy_yBy_(p.x, p.y)
+		bbox.scaleBy_(exp(event.deltaY()*0.01))
+		bbox.translateXBy_yBy_(-p.x, -p.y)
+		refresher.refresh_()
+	
+	def mouseDown_(self, event):
+		self.edit_bbox = event.modifierFlags() & NSAlternateKeyMask
+	
+	def mouseDragged_(self, event):
+		if not self.edit_bbox:
+			return
+		delta = NSMakeSize(event.deltaX(), -event.deltaY())
+		delta = self.transform.transformSize_(delta)
+		bbox.translateXBy_yBy_(delta.width, delta.height)
+		refresher.refresh_()
+	
 	def mouseUp_(self, event):
+		if self.edit_bbox:
+			return
+		
 		point = self.transform.transformPoint_(event.locationInWindow())
 		annotation = self.page.annotationAtPoint_(point)
 		if annotation is None:
