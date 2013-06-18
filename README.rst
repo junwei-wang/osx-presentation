@@ -35,7 +35,7 @@ Key bindings
 ::
 
 	'h'          show this help
-	'q'          quit
+	'q', esc     quit
 	'w'          toggle web view
 	'f'          toggle fullscreen
 	up, left     previous page
