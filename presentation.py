@@ -43,7 +43,7 @@ def nop(): pass
 def print_help():
 	sys.stderr.write(textwrap.dedent("""\
 		'h'          show this help
-		'q'          quit
+		'q', esc     quit
 		'w'          toggle web view
 		'f'          toggle fullscreen
 		up, left     previous page
@@ -201,6 +201,7 @@ class SlideView(NSView):
 		_, (w, h) = page_rect
 		r = min(width/w, height/h)
 		
+		NSGraphicsContext.saveGraphicsState()
 		transform = NSAffineTransform.transform()
 		transform.translateXBy_yBy_(width/2., height/2.)
 		transform.scaleXBy_yBy_(r, r)
@@ -209,8 +210,7 @@ class SlideView(NSView):
 
 		NSEraseRect(page_rect)
 		page.drawWithBox_(kPDFDisplayBoxCropBox)
-		transform.invert()
-		transform.concat()
+		NSGraphicsContext.restoreGraphicsState()
 
 
 class MessageView(NSView):
@@ -253,11 +253,11 @@ class MessageView(NSView):
 		text = NSString.stringWithString_(self.text)
 		x = rect.size.width - self.pps*(time.time()-self.start)
 		for attr in [{
-			NSFontAttributeName: NSFont.labelFontOfSize_(30),
+			NSFontAttributeName:            NSFont.labelFontOfSize_(30),
 			NSStrokeColorAttributeName:     NSColor.colorWithDeviceWhite_alpha_(0., .75),
 			NSStrokeWidthAttributeName:     20.,
 		}, {
-			NSFontAttributeName: NSFont.labelFontOfSize_(30),
+			NSFontAttributeName:            NSFont.labelFontOfSize_(30),
 			NSForegroundColorAttributeName: NSColor.colorWithDeviceWhite_alpha_(1., .75),
 		}]:
 			text.drawAtPoint_withAttributes_((x, 4.), attr)
@@ -288,13 +288,14 @@ class PresenterView(NSView):
 		page_rect = self.page.boundsForBox_(kPDFDisplayBoxCropBox)
 		_, (w, h) = page_rect
 		r = current_width/w
-	
-		self.transform = NSAffineTransform.transform()
-		self.transform.translateXBy_yBy_(margin, height/2.)
-		self.transform.scaleXBy_yBy_(r, r)
-		self.transform.translateXBy_yBy_(0., -h/2.)
-		self.transform.concat()
 		
+		NSGraphicsContext.saveGraphicsState()
+		transform = NSAffineTransform.transform()
+		transform.translateXBy_yBy_(margin, height/2.)
+		transform.scaleXBy_yBy_(r, r)
+		transform.translateXBy_yBy_(0., -h/2.)
+		transform.concat()
+				
 		NSEraseRect(page_rect)
 		self.page.drawWithBox_(kPDFDisplayBoxCropBox)
 		
@@ -304,10 +305,15 @@ class PresenterView(NSView):
 			annotation_type = type(annotation)
 			if annotation_type == PDFAnnotationLink:
 				NSFrameRectWithWidth(annotation.bounds(), .5)
-		self.resetCursorRects()
 
+		self.transform = transform
+		self.resetCursorRects()
 		self.transform.invert()
-		self.transform.concat()
+
+		# screen border
+		NSColor.whiteColor().setFill()
+		NSFrameRect(page_rect)
+		NSGraphicsContext.restoreGraphicsState()
 		
 
 		# time
@@ -348,6 +354,7 @@ class PresenterView(NSView):
 		_, (w, h) = page_rect
 		r = (width - (3*margin + current_width))/w
 	
+		NSGraphicsContext.saveGraphicsState()
 		transform = NSAffineTransform.transform()
 		transform.translateXBy_yBy_(2*margin+current_width, height/2.)
 		transform.scaleXBy_yBy_(r, r)
@@ -356,8 +363,7 @@ class PresenterView(NSView):
 
 		NSEraseRect(page_rect)
 		page.drawWithBox_(kPDFDisplayBoxCropBox)
-		transform.invert()
-		transform.concat()
+		NSGraphicsContext.restoreGraphicsState()
 		
 	
 	def resetCursorRects(self):
@@ -373,7 +379,8 @@ class PresenterView(NSView):
 	
 	def keyDown_(self, event):
 		c = event.characters()
-		if c == "q": # quit
+
+		if c in ["q", chr(27)]: # quit
 			app.terminate_(self)
 		
 		elif c == "t": # switch time representation
@@ -411,8 +418,7 @@ class PresenterView(NSView):
 			action()
 		
 		refresher.refresh_()
-	
-	
+
 	def mouseUp_(self, event):
 		point = self.transform.transformPoint_(event.locationInWindow())
 		annotation = self.page.annotationAtPoint_(point)
