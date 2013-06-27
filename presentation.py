@@ -22,20 +22,11 @@ import textwrap
 from math import exp
 from collections import defaultdict
 
-from objc import *
-from Foundation import *
-from Cocoa import *
-from Quartz import *
-from WebKit import *
-
-
-# application init ###########################################################
-
-app = NSApplication.sharedApplication()
-app.activateIgnoringOtherApps_(True)
-
 
 # constants and helpers ######################################################
+
+MAJOR, MINOR = 0, 5
+VERSION = "%s.%s" % (MAJOR, MINOR)
 
 PRESENTER_FRAME = ((100., 100.), (1024., 768.))
 
@@ -73,8 +64,9 @@ if args and args[0].startswith("-psn"):
 
 def exit_usage(message=None, code=0):
 	usage = textwrap.dedent("""\
-	Usage: %s [-hd:f] <doc.pdf>
-		-h --help          this help message
+	Usage: %s [-hvd:f] <doc.pdf>
+		-h --help          print this help message then exit
+		-v --version       print version then exit
 		-d --duration <t>  duration of the talk in minutes
 		-f --feed          enable reading feed on stdin
 		<doc.pdf>          file to present
@@ -84,31 +76,46 @@ def exit_usage(message=None, code=0):
 	sys.stderr.write(usage)
 	sys.exit(code)
 
+def exit_version():
+	sys.stdout.write("%s %s\n" % (os.path.basename(name), VERSION))
+	sys.exit()
+
 
 # options
 
 try:
-	options, args = getopt.getopt(args, "hd:f", ["help", "duration=", "feed"])
+	options, args = getopt.getopt(args, "hvd:f", ["help", "version", "duration=", "feed"])
 except getopt.GetoptError as message:
 	exit_usage(message, 1)
 
 show_feed = False
 presentation_duration = 0
-bbox = NSAffineTransform.transform()
 
 for opt, value in options:
 	if opt in ["-h", "--help"]:
 		exit_usage()
+	elif opt in ["-v", "--version"]:
+		exit_version()
 	elif opt in ["-d", "--duration"]:
 		presentation_duration = int(value)
 	elif opt in ["-f", "--feed"]:
 		show_feed = True
 
-
-# args
-
 if len(args) > 1:
 	exit_usage("no more than one argument is expected", 1)
+
+
+# application init ###########################################################
+
+from objc import *
+from Foundation import *
+from Cocoa import *
+from Quartz import *
+from WebKit import *
+
+
+app = NSApplication.sharedApplication()
+app.activateIgnoringOtherApps_(True)
 
 if args:
 	url = NSURL.fileURLWithPath_(args[0])
@@ -121,7 +128,7 @@ else:
 		exit_usage("please select a pdf file", 1)
 
 
-# opening presentation #######################################################
+# opening presentation
 
 pdf = PDFDocument.alloc().initWithURL_(url)
 if not pdf:
@@ -186,6 +193,10 @@ for page_number in range(page_count):
 	for annotation in page.annotations():
 		if type(annotation) == PDFAnnotationText:
 			notes[page_number].append(annotation.contents())
+
+# bbox
+
+bbox = NSAffineTransform.transform()
 
 
 # presentation ###############################################################
@@ -320,7 +331,7 @@ class PresenterView(NSView):
 		NSGraphicsContext.restoreGraphicsState()
 
 		# screen border
-		NSColor.whiteColor().setFill()
+		NSColor.grayColor().setFill()
 		NSFrameRect(page_rect)
 		NSGraphicsContext.restoreGraphicsState()
 		
