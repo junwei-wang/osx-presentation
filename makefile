@@ -1,9 +1,23 @@
+# variables ##################################################################
+
+DMG_PATH = dmg
+VERSION = $(lastword $(shell ./presentation.py --version))
+
+
+# targets ####################################################################
+
 script := presentation.py
 app    := Présentation.app
+dist   := osx-presentation-$(VERSION).dmg
+src    := osx-presentation-$(VERSION).tbz
+readme := README.rst
+
+
+# rules ######################################################################
 
 .PHONY: all clean
 
-all: $(app)
+all: $(app) $(src) $(dist)
 
 $(app): $(script)
 	mkdir -p $@/Contents/MacOS/
@@ -14,7 +28,7 @@ $(app): $(script)
 	<plist version='1.0'> \
 	<dict> \
 		<key>CFBundleExecutable</key><string>$^</string> \
-		<key>CFBundleShortVersionString</key><string>$(lastword $(shell ./$^ --version)).0</string> \
+		<key>CFBundleShortVersionString</key><string>$(VERSION).0</string> \
 		<key>NSHumanReadableCopyright</key><string>Copyright © 2011-2013 Renaud Blanch</string> \
 	</dict> \
 	</plist>" > $@/Contents/Info.plist
@@ -22,5 +36,18 @@ $(app): $(script)
 	cp $^ $@/Contents/MacOS/
 	touch $@
 
+
+$(src):
+	hg archive -r $(VERSION) -t tbz2 $@
+
+
+$(dist): $(app) $(readme)
+	mkdir $(DMG_PATH)
+	cp -r $^ $(DMG_PATH)
+	hdiutil create -ov -srcfolder $(DMG_PATH) -volname $(basename $@) $@
+	hdiutil internet-enable -yes $@
+	rm -rf $(DMG_PATH)
+
+
 clean:
-	-rm -rf $(app)
+	-rm -rf $(app) $(src) $(dist)
