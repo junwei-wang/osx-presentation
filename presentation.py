@@ -139,6 +139,7 @@ else:
 
 # opening presentation
 
+file_name = url.lastPathComponent()
 pdf = PDFDocument.alloc().initWithURL_(url)
 if not pdf:
 	exit_usage("'%s' does not seem to be a pdf." % url.path(), 1)
@@ -544,7 +545,7 @@ def add_subview(view, subview, autoresizing_mask=NSViewWidthSizable|NSViewHeight
 
 # presentation window ########################################################
 
-presentation_window = create_window(name)
+presentation_window = create_window(file_name)
 presentation_view   = presentation_window.contentView()
 frame = presentation_view.frame()
 
@@ -581,7 +582,7 @@ if show_feed:
 
 # presenter window ###########################################################
 
-presenter_window = create_window(name)
+presenter_window = create_window(file_name)
 presenter_view   = create_view(presenter_window, PresenterView)
 
 presenter_window.center()
