@@ -29,6 +29,7 @@ NAME = "Présentation"
 MAJOR, MINOR = 0, 6
 VERSION = "%s.%s" % (MAJOR, MINOR)
 COPYRIGHT = "Copyright © 2011-2013 Renaud Blanch"
+HOME = "http://iihm.imag.fr/blanch/software/osx-presentation/"
 
 PRESENTER_FRAME = ((100., 100.), (1024., 768.))
 
@@ -624,7 +625,6 @@ class ApplicationDelegate(NSObject):
 		})
 	
 	def update_(self, sender):
-		HOME = "http://iihm.imag.fr/blanch/software/osx-presentation/"
 		try:
 			data, response, _sentinel = NSURLConnection.sendSynchronousRequest_returningResponse_error_(
 				NSURLRequest.requestWithURL_(NSURL.URLWithString_(HOME + "releases/version.txt")), None, None
@@ -638,14 +638,16 @@ class ApplicationDelegate(NSObject):
 		
 		version = data.bytes().tobytes().decode("utf-8")
 		if version == VERSION:
-			return
+			title   = "No update available"
+			message = "Your version (%@) of %@ is up to date."
+		else:
+			title =   "Update available"
+			message = "A new version (%@) of %@ is available.",
 		
 		if NSAlert.alertWithMessageText_defaultButton_alternateButton_otherButton_informativeTextWithFormat_(
-			"Update available",
+			title,
 			"Go to website", "Cancel", None,
-			"A new version (%@) of %@ is available.",
-			version,
-			_(NAME),
+			message, version, _(NAME),
 		).runModal() != NSAlertDefaultReturn:
 			return
 		
