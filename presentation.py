@@ -25,8 +25,10 @@ from collections import defaultdict
 
 # constants and helpers ######################################################
 
-MAJOR, MINOR = 0, 5
+NAME = "Présentation"
+MAJOR, MINOR = 0, 6
 VERSION = "%s.%s" % (MAJOR, MINOR)
+COPYRIGHT = "Copyright © 2011-2013 Renaud Blanch"
 
 PRESENTER_FRAME = ((100., 100.), (1024., 768.))
 
@@ -112,6 +114,13 @@ from Foundation import *
 from Cocoa import *
 from Quartz import *
 from WebKit import *
+
+objc.setVerbose(1)
+
+if sys.version_info[0] == 3:
+	_ = lambda s: s
+else:
+	_ = NSString.alloc().initWithUTF8String_
 
 
 app = NSApplication.sharedApplication()
@@ -590,6 +599,80 @@ def toggle_fullscreen():
 		else:
 			view.enterFullScreenMode_withOptions_(screen, {})
 		window.makeFirstResponder_(view)
+
+
+
+# application delegate #######################################################
+
+def add_item(menu, title, action, key="", modifiers=NSCommandKeyMask, target=app):
+	menu_item = menu.addItemWithTitle_action_keyEquivalent_(
+		NSString.localizedStringWithFormat_(" ".join(("%@",) * len(title)), *(_(s) for s in title)),
+		action, key)
+	menu_item.setKeyEquivalentModifierMask_(modifiers)
+	menu_item.setTarget_(target)
+	return menu_item
+	
+	
+class ApplicationDelegate(NSObject):
+	def about_(self, sender):
+		app.orderFrontStandardAboutPanelWithOptions_({
+			"ApplicationName":    _(NAME),
+			"Version":            _(VERSION),
+			"Copyright":          _(COPYRIGHT),
+			"ApplicationVersion": _("%s %s" % (NAME, VERSION)),
+		})
+	
+	def update_(self, sender):
+		HOME = "http://iihm.imag.fr/blanch/software/osx-presentation/"
+		try:
+			data, response, _sentinel = NSURLConnection.sendSynchronousRequest_returningResponse_error_(
+				NSURLRequest.requestWithURL_(NSURL.URLWithString_(HOME + "releases/version.txt")), None, None
+			)
+			assert response.statusCode() == 200 # found
+		except:
+			NSAlert.alertWithError_(
+				NSError.errorWithDomain_code_userInfo_("unable to connect to internet,", 1, {})
+			).runModal()
+			return
+		
+		version = data.bytes().tobytes().decode("utf-8")
+		if version == VERSION:
+			return
+		
+		if NSAlert.alertWithMessageText_defaultButton_alternateButton_otherButton_informativeTextWithFormat_(
+			"Update available",
+			"Go to website", "Cancel", None,
+			"A new version (%@) of %@ is available.",
+			version,
+			_(NAME),
+		).runModal() != NSAlertDefaultReturn:
+			return
+		
+		NSWorkspace.sharedWorkspace().openURL_(NSURL.URLWithString_(HOME))
+	
+	
+	def applicationDidFinishLaunching_(self, notification):
+		main_menu = NSMenu.alloc().initWithTitle_("MainMenu")
+		
+		application_menuitem = main_menu.addItemWithTitle_action_keyEquivalent_("Application", None, " ")
+		application_menu = NSMenu.alloc().initWithTitle_("Application")
+#		app.setAppleMenu_(application_menu)
+		
+		add_item(application_menu, ["About", NAME], "about:", target=self)
+		add_item(application_menu, ["Check for updates…"], "update:", target=self)
+		application_menu.addItem_(NSMenuItem.separatorItem())
+		add_item(application_menu, ["Hide", NAME], "hide:", "h")
+		add_item(application_menu, ["Hide Others"], "hideOtherApplications:", "h", NSCommandKeyMask | NSAlternateKeyMask)
+		add_item(application_menu, ["Show All"], "unhideAllApplications:")
+		application_menu.addItem_(NSMenuItem.separatorItem())
+		add_item(application_menu, ["Quit", NAME], "terminate:", "q")
+		main_menu.setSubmenu_forItem_(application_menu, application_menuitem)
+		
+		app.setMainMenu_(main_menu)
+
+
+application_delegate = ApplicationDelegate.alloc().init()
+app.setDelegate_(application_delegate)
 
 
 # main loop ##################################################################

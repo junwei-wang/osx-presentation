@@ -15,9 +15,9 @@ readme := README.rst
 
 # rules ######################################################################
 
-.PHONY: all clean
+.PHONY: all clean dmg archive
 
-all: $(app) $(src) $(dist)
+all: $(app)
 
 $(app): $(script)
 	mkdir -p $@/Contents/MacOS/
@@ -37,9 +37,10 @@ $(app): $(script)
 	touch $@
 
 
-$(src):
+archive:
 	hg archive -r $(VERSION) -t tbz2 $@
 
+dmg: $(app) $(dist)
 
 $(dist): $(app) $(readme)
 	mkdir $(DMG_PATH)
