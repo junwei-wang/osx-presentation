@@ -35,26 +35,6 @@ PRESENTER_FRAME = ((100., 100.), (1024., 768.))
 
 def nop(): pass
 
-def print_help():
-	sys.stderr.write(textwrap.dedent("""\
-		'h'          show this help
-		'q', esc     quit
-		'w'          toggle web view
-		'f'          toggle fullscreen
-		up, left     previous page
-		down, right  next page
-		home         first page
-		end          last page
-		page up      back
-		page down    forward
-		't'          switch between clock and timer
-		'z'          set origin for timer
-		']'          add 1 minute to planned time
-		'['          sub 1 minute
-		'}'          add 10 minutes
-		'{'          sub 10 minutes
-	"""))
-
 
 # handling args ##############################################################
 
@@ -119,9 +99,9 @@ from WebKit import *
 objc.setVerbose(1)
 
 if sys.version_info[0] == 3:
-	_ = lambda s: s
+	_s = lambda s: s
 else:
-	_ = NSString.alloc().initWithUTF8String_
+	_s = NSString.alloc().initWithUTF8String_
 
 
 app = NSApplication.sharedApplication()
@@ -297,6 +277,7 @@ class PresenterView(NSView):
 	duration = presentation_duration * 60. + 1.
 	absolute_time = False
 	start_time = time.time()
+	show_help = True
 	
 	def drawRect_(self, rect):
 		bounds = self.bounds()
@@ -397,6 +378,31 @@ class PresenterView(NSView):
 		page.drawWithBox_(kPDFDisplayBoxCropBox)
 		NSGraphicsContext.restoreGraphicsState()
 		
+		# help
+		if not self.show_help:
+			return
+		
+		help_text = NSString.stringWithString_(_s(textwrap.dedent("""\
+			h		show/hide this help
+			q/⎋		quit
+			w		toggle web view
+			f		toggle fullscreen
+			←/↑		previous page
+			→/↓		next page
+			⇞		back
+			⇟		forward
+			↖		first page
+			↘		last page
+			t		switch between clock and timer
+			z		set origin for timer
+			[/]		sub/add 1 minute to planned time
+			{/}		sub/add 10 minutes
+		""")))
+		help_text.drawAtPoint_withAttributes_((2*margin+current_width, margin/6), {
+			NSFontAttributeName:            NSFont.labelFontOfSize_(height/100),
+			NSForegroundColorAttributeName: NSColor.whiteColor(),
+		})
+	
 	
 	def resetCursorRects(self):
 		self.discardCursorRects()
@@ -421,6 +427,9 @@ class PresenterView(NSView):
 		if c in ["q", chr(27)]: # quit
 			app.terminate_(self)
 		
+		elif c == "h":
+			self.show_help = not self.show_help
+		
 		elif c == "t": # switch time representation
 			self.absolute_time = not self.absolute_time
 
@@ -441,7 +450,6 @@ class PresenterView(NSView):
 		
 		else:
 			action = {
-				"h":                     print_help,
 				"f":                     toggle_fullscreen,
 				"w":                     toggle_web_view,
 				NSUpArrowFunctionKey:    prev_page,
@@ -608,7 +616,7 @@ def toggle_fullscreen():
 
 def add_item(menu, title, action, key="", modifiers=NSCommandKeyMask, target=app):
 	menu_item = menu.addItemWithTitle_action_keyEquivalent_(
-		NSString.localizedStringWithFormat_(" ".join(("%@",) * len(title)), *(_(s) for s in title)),
+		NSString.localizedStringWithFormat_(" ".join(("%@",) * len(title)), *(_s(s) for s in title)),
 		action, key)
 	menu_item.setKeyEquivalentModifierMask_(modifiers)
 	menu_item.setTarget_(target)
@@ -618,15 +626,15 @@ def add_item(menu, title, action, key="", modifiers=NSCommandKeyMask, target=app
 class ApplicationDelegate(NSObject):
 	def about_(self, sender):
 		app.orderFrontStandardAboutPanelWithOptions_({
-			"ApplicationName":    _(NAME),
-			"Version":            _(VERSION),
-			"Copyright":          _(COPYRIGHT),
-			"ApplicationVersion": _("%s %s" % (NAME, VERSION)),
+			"ApplicationName":    _s(NAME),
+			"Version":            _s(VERSION),
+			"Copyright":          _s(COPYRIGHT),
+			"ApplicationVersion": _s("%s %s" % (NAME, VERSION)),
 		})
 	
 	def update_(self, sender):
 		try:
-			data, response, _sentinel = NSURLConnection.sendSynchronousRequest_returningResponse_error_(
+			data, response, _ = NSURLConnection.sendSynchronousRequest_returningResponse_error_(
 				NSURLRequest.requestWithURL_(NSURL.URLWithString_(HOME + "releases/version.txt")), None, None
 			)
 			assert response.statusCode() == 200 # found
@@ -647,7 +655,7 @@ class ApplicationDelegate(NSObject):
 		if NSAlert.alertWithMessageText_defaultButton_alternateButton_otherButton_informativeTextWithFormat_(
 			title,
 			"Go to website", "Cancel", None,
-			message, version, _(NAME),
+			message, version, _s(NAME),
 		).runModal() != NSAlertDefaultReturn:
 			return
 		
