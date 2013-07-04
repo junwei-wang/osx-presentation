@@ -26,7 +26,7 @@ from collections import defaultdict
 # constants and helpers ######################################################
 
 NAME = "Présentation"
-MAJOR, MINOR = 0, 6
+MAJOR, MINOR = 0, 7
 VERSION = "%s.%s" % (MAJOR, MINOR)
 COPYRIGHT = "Copyright © 2011-2013 Renaud Blanch"
 HOME = "http://iihm.imag.fr/blanch/software/osx-presentation/"
@@ -636,13 +636,13 @@ class ApplicationDelegate(NSObject):
 			).runModal()
 			return
 		
-		version = data.bytes().tobytes().decode("utf-8")
+		version = bytearray(data).decode("utf-8")
 		if version == VERSION:
 			title   = "No update available"
 			message = "Your version (%@) of %@ is up to date."
 		else:
 			title =   "Update available"
-			message = "A new version (%@) of %@ is available.",
+			message = "A new version (%@) of %@ is available."
 		
 		if NSAlert.alertWithMessageText_defaultButton_alternateButton_otherButton_informativeTextWithFormat_(
 			title,
