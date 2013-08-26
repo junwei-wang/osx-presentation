@@ -357,6 +357,29 @@ class PresenterView(NSView):
 			NSForegroundColorAttributeName: NSColor.whiteColor(),
 		})
 		
+		# help
+		if self.show_help:
+			help_text = NSString.stringWithString_(_s(textwrap.dedent("""\
+				h		show/hide this help
+				q/⎋		quit
+				w		toggle web view
+				f		toggle fullscreen
+				←/↑		previous page
+				→/↓		next page
+				⇞		back
+				⇟		forward
+				↖		first page
+				↘		last page
+				t		switch between clock and timer
+				z		set origin for timer
+				[/]		sub/add 1 minute to planned time
+				{/}		sub/add 10 minutes
+			""")))
+			help_text.drawAtPoint_withAttributes_((2*margin+current_width, margin/6), {
+				NSFontAttributeName:            NSFont.labelFontOfSize_(height/100),
+				NSForegroundColorAttributeName: NSColor.whiteColor(),
+			})
+		
 		# next page
 		try:
 			page = pdf.pageAtIndex_(current_page+1)
@@ -377,31 +400,6 @@ class PresenterView(NSView):
 		NSEraseRect(page_rect)
 		page.drawWithBox_(kPDFDisplayBoxCropBox)
 		NSGraphicsContext.restoreGraphicsState()
-		
-		# help
-		if not self.show_help:
-			return
-		
-		help_text = NSString.stringWithString_(_s(textwrap.dedent("""\
-			h		show/hide this help
-			q/⎋		quit
-			w		toggle web view
-			f		toggle fullscreen
-			←/↑		previous page
-			→/↓		next page
-			⇞		back
-			⇟		forward
-			↖		first page
-			↘		last page
-			t		switch between clock and timer
-			z		set origin for timer
-			[/]		sub/add 1 minute to planned time
-			{/}		sub/add 10 minutes
-		""")))
-		help_text.drawAtPoint_withAttributes_((2*margin+current_width, margin/6), {
-			NSFontAttributeName:            NSFont.labelFontOfSize_(height/100),
-			NSForegroundColorAttributeName: NSColor.whiteColor(),
-		})
 	
 	
 	def resetCursorRects(self):
