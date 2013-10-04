@@ -361,9 +361,10 @@ class PresenterView(NSView):
 		if self.show_help:
 			help_text = NSString.stringWithString_(_s(textwrap.dedent("""\
 				h		show/hide this help
-				q/⎋		quit
+				q		quit
 				w		toggle web view
 				f		toggle fullscreen
+				⎋		leave fullscreen mode
 				←/↑		previous page
 				→/↓		next page
 				⇞		back
@@ -422,8 +423,12 @@ class PresenterView(NSView):
 		
 		c = event.characters()
 
-		if c in ["q", chr(27)]: # quit
+		if c == "q": # quit
 			app.terminate_(self)
+		
+		elif c == chr(27): # esc
+			if app.windows()[-1].contentView().isInFullScreenMode():
+				toggle_fullscreen()
 		
 		elif c == "h":
 			self.show_help = not self.show_help
