@@ -34,10 +34,12 @@ Key bindings
 
 ::
 
-	'h'          show this help
-	'q', esc     quit
+	'?'          show this help
+	'h'          hide
+	'q'          quit
 	'w'          toggle web view
 	'f'          toggle fullscreen
+	esc          leave fullscreen
 	up, left     previous page
 	down, right  next page
 	home         first page
@@ -46,7 +48,5 @@ Key bindings
 	page down    forward
 	't'          switch between clock and timer
 	'z'          set origin for timer
-	']'          add 1 minute to planned time
-	'['          sub 1 minute
-	'}'          add 10 minutes
-	'{'          sub 10 minutes
+	'['/']'      sub/add 1 minute to planned time
+	'{'/'}'      sub/add 10 minutes

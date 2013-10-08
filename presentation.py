@@ -365,7 +365,7 @@ class PresenterView(NSView):
 				q		quit
 				w		toggle web view
 				f		toggle fullscreen
-				⎋		leave fullscreen mode
+				⎋		leave fullscreen
 				←/↑		previous page
 				→/↓		next page
 				⇞		back
