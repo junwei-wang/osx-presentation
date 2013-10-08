@@ -17,36 +17,4 @@ A multi-screen presentation tool for pdf on the mac, with some (more or less) us
 - a scrolling banner that reads its text from stdin.
 
 
-Usage
------
-
-::
-
-	Usage: ./presentation.py [-hd:f] <doc.pdf>
-		-h --help          this help message
-		-d --duration <t>  duration of the talk in minutes
-		-f --feed          enable reading feed on stdin
-		<doc.pdf>          pdf to present
-
-
-Key bindings
-------------
-
-::
-
-	'?'          show this help
-	'h'          hide
-	'q'          quit
-	'w'          toggle web view
-	'f'          toggle fullscreen
-	esc          leave fullscreen
-	up, left     previous page
-	down, right  next page
-	home         first page
-	end          last page
-	page up      back
-	page down    forward
-	't'          switch between clock and timer
-	'z'          set origin for timer
-	'['/']'      sub/add 1 minute to planned time
-	'{'/'}'      sub/add 10 minutes
+Download and documentation are available at: [http://iihm.imag.fr/blanch/software/osx-presentation/]
