@@ -283,10 +283,10 @@ class PresenterView(NSView):
 		bounds = self.bounds()
 		width, height = bounds.size
 
-		margin = width / 20
-		current_width = width / 2
-		font_size = margin / 3
-	
+		margin = width / 20.
+		current_width = (width-3*margin)*2/3.
+		font_size = margin/2.
+		
 		NSRectFillUsingOperation(bounds, NSCompositeClear)
 
 		# current 
@@ -297,9 +297,9 @@ class PresenterView(NSView):
 		
 		NSGraphicsContext.saveGraphicsState()
 		transform = NSAffineTransform.transform()
-		transform.translateXBy_yBy_(margin, height/2.)
+		transform.translateXBy_yBy_(margin, height-1.5*margin)
 		transform.scaleXBy_yBy_(r, r)
-		transform.translateXBy_yBy_(0., -h/2.)
+		transform.translateXBy_yBy_(0., -h)
 		transform.concat()
 		
 		NSGraphicsContext.saveGraphicsState()
@@ -334,7 +334,7 @@ class PresenterView(NSView):
 		else:
 			clock = time.gmtime(abs(self.duration - (time.time() - self.start_time)))
 		clock = NSString.stringWithString_(time.strftime("%H:%M:%S", clock))
-		clock.drawAtPoint_withAttributes_((margin, height-margin*2), {
+		clock.drawAtPoint_withAttributes_((margin, height-1.4*margin), {
 			NSFontAttributeName:            NSFont.labelFontOfSize_(margin),
 			NSForegroundColorAttributeName: NSColor.whiteColor(),
 		})
@@ -348,19 +348,20 @@ class PresenterView(NSView):
 		}
 		tw, _ = page_number.sizeWithAttributes_(attr)
 		page_number.drawAtPoint_withAttributes_((margin+current_width-tw,
-		                                         height-margin*2.), attr)
+		                                         height-1.4*margin), attr)
 
 		# notes
 		note = NSString.stringWithString_("\n".join(notes[current_page]))
-		note.drawAtPoint_withAttributes_((margin, margin), {
-			NSFontAttributeName:            NSFont.labelFontOfSize_(font_size),
+		note.drawAtPoint_withAttributes_((margin, font_size), {
+			NSFontAttributeName:            NSFont.labelFontOfSize_(font_size/2.),
 			NSForegroundColorAttributeName: NSColor.whiteColor(),
 		})
 		
 		# help
 		if self.show_help:
 			help_text = NSString.stringWithString_(_s(textwrap.dedent("""\
-				h		show/hide this help
+				?		show/hide this help
+				h		hide
 				q		quit
 				w		toggle web view
 				f		toggle fullscreen
@@ -376,8 +377,8 @@ class PresenterView(NSView):
 				[/]		sub/add 1 minute to planned time
 				{/}		sub/add 10 minutes
 			""")))
-			help_text.drawAtPoint_withAttributes_((2*margin+current_width, margin/6), {
-				NSFontAttributeName:            NSFont.labelFontOfSize_(height/100),
+			help_text.drawAtPoint_withAttributes_((2*margin+current_width, font_size), {
+				NSFontAttributeName:            NSFont.labelFontOfSize_(font_size/3.),
 				NSForegroundColorAttributeName: NSColor.whiteColor(),
 			})
 		
@@ -388,18 +389,20 @@ class PresenterView(NSView):
 			return
 		page_rect = page.boundsForBox_(kPDFDisplayBoxCropBox)
 		_, (w, h) = page_rect
-		r = (width - (3*margin + current_width))/w
+		r = current_width/2./w
 	
 		NSGraphicsContext.saveGraphicsState()
 		transform = NSAffineTransform.transform()
-		transform.translateXBy_yBy_(2*margin+current_width, height/2.)
+		transform.translateXBy_yBy_(2*margin+current_width, height-2.*margin)
 		transform.scaleXBy_yBy_(r, r)
-		transform.translateXBy_yBy_(0., -h/2.)
+		transform.translateXBy_yBy_(0., -h)
 		transform.concat()
 		bbox.concat()
 
 		NSEraseRect(page_rect)
 		page.drawWithBox_(kPDFDisplayBoxCropBox)
+		NSColor.colorWithCalibratedWhite_alpha_(.25, .25).setFill()
+		NSRectFillUsingOperation(page_rect, NSCompositeSourceAtop)
 		NSGraphicsContext.restoreGraphicsState()
 	
 	
@@ -427,10 +430,12 @@ class PresenterView(NSView):
 			app.terminate_(self)
 		
 		elif c == chr(27): # esc
-			if app.windows()[-1].contentView().isInFullScreenMode():
-				toggle_fullscreen()
+			toggle_fullscreen(fullscreen=False)
 		
 		elif c == "h":
+			app.hide_(app)
+		
+		elif c == "?":
 			self.show_help = not self.show_help
 		
 		elif c == "t": # switch time representation
@@ -603,16 +608,22 @@ presenter_window.makeFirstResponder_(presenter_view)
 
 # handling full screens ######################################################
 
-def toggle_fullscreen():
-	for window, screen in reversed(zip(reversed(app.windows()),
-	                                   NSScreen.screens())):
-		view = window.contentView()
-		if view.isInFullScreenMode():
-			view.exitFullScreenModeWithOptions_({})
-		else:
-			view.enterFullScreenMode_withOptions_(screen, {})
-		window.makeFirstResponder_(view)
+def toggle_fullscreen(fullscreen=None):
+	_fullscreen = app.mainWindow().contentView().isInFullScreenMode()
+	if fullscreen is None:
+		fullscreen = not _fullscreen
+	
+	if fullscreen != _fullscreen:
+		for window, screen in reversed(zip(reversed(app.windows()),
+		                                   NSScreen.screens())):
+			view = window.contentView()
+			if fullscreen:
+				view.enterFullScreenMode_withOptions_(screen, {})
+			else:
+				view.exitFullScreenModeWithOptions_({})
+			window.makeFirstResponder_(view)
 
+	return _fullscreen
 
 
 # application delegate #######################################################
@@ -683,6 +694,12 @@ class ApplicationDelegate(NSObject):
 		main_menu.setSubmenu_forItem_(application_menu, application_menuitem)
 		
 		app.setMainMenu_(main_menu)
+	
+	def applicationWillHide_(self, notification):
+		self.fullscreen = toggle_fullscreen(fullscreen=False)
+	
+	def applicationDidUnhide_(self, notification):
+		toggle_fullscreen(fullscreen=self.fullscreen)
 
 
 application_delegate = ApplicationDelegate.alloc().init()
