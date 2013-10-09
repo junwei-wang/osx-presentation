@@ -609,12 +609,12 @@ presenter_window.makeFirstResponder_(presenter_view)
 # handling full screens ######################################################
 
 def toggle_fullscreen(fullscreen=None):
-	_fullscreen = app.mainWindow().contentView().isInFullScreenMode()
+	_fullscreen = presenter_view.isInFullScreenMode()
 	if fullscreen is None:
 		fullscreen = not _fullscreen
 	
 	if fullscreen != _fullscreen:
-		for window, screen in reversed(zip(reversed(app.windows()),
+		for window, screen in reversed(zip([presenter_window, presentation_window],
 		                                   NSScreen.screens())):
 			view = window.contentView()
 			if fullscreen:
