@@ -17,4 +17,5 @@ A multi-screen presentation tool for pdf on the mac, with some (more or less) us
 - a scrolling banner that reads its text from stdin.
 
 
-Download and documentation are available at: [http://iihm.imag.fr/blanch/software/osx-presentation/]
+Download and documentation are available at:
+[http://iihm.imag.fr/blanch/software/osx-presentation/]
