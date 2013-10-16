@@ -28,8 +28,12 @@ from collections import defaultdict
 NAME = "Présentation"
 MAJOR, MINOR = 0, 8
 VERSION = "%s.%s" % (MAJOR, MINOR)
-COPYRIGHT = "Copyright © 2011-2013 Renaud Blanch"
 HOME = "http://iihm.imag.fr/blanch/software/osx-presentation/"
+CREDITS = """
+<a href='%s'>osx-presentation</a> <br/>
+Licence: <a href='http://www.gnu.org/licenses/gpl-3.0.txt'>GPLv3</a>+
+""" % HOME
+COPYRIGHT = "Copyright © 2011-2013 Renaud Blanch"
 
 PRESENTER_FRAME = ((100., 100.), (1024., 768.))
 
@@ -639,11 +643,13 @@ def add_item(menu, title, action, key="", modifiers=NSCommandKeyMask, target=app
 	
 class ApplicationDelegate(NSObject):
 	def about_(self, sender):
+		credits, _ = NSAttributedString.alloc().initWithHTML_documentAttributes_(bytearray(CREDITS, "utf8"), None)
 		app.orderFrontStandardAboutPanelWithOptions_({
 			"ApplicationName":    _s(NAME),
 			"Version":            _s(VERSION),
 			"Copyright":          _s(COPYRIGHT),
 			"ApplicationVersion": _s("%s %s" % (NAME, VERSION)),
+			"Credits":            credits,
 		})
 	
 	def update_(self, sender):
