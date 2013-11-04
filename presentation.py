@@ -138,6 +138,7 @@ from WebKit import WebView
 
 if sys.version_info[0] == 3:
 	_s = lambda s: s
+	sys.stdin = sys.stdin.detach() # so that sys.stdin.readline returns bytes
 else:
 	_s = NSString.alloc().initWithUTF8String_
 
