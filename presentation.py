@@ -94,13 +94,47 @@ if len(args) > 1:
 
 # application init ###########################################################
 
-from objc import *
-from Foundation import *
-from Cocoa import *
-from Quartz import *
-from WebKit import *
+from objc import setVerbose
+setVerbose(1)
 
-objc.setVerbose(1)
+from objc import nil, NO, YES
+from Foundation import (
+	NSObject, NSTimer, NSError, NSString, NSAttributedString,
+	NSURL, NSURLRequest, NSURLConnection,
+	NSAffineTransform, NSMakeSize,
+)
+from AppKit import (
+	NSApplication,
+	NSOpenPanel, NSFileHandlingPanelOKButton,
+	NSAlert, NSAlertDefaultReturn,
+	NSView,
+	NSViewWidthSizable, NSViewHeightSizable,
+	NSWindow,
+	NSMiniaturizableWindowMask, NSResizableWindowMask, NSTitledWindowMask,
+	NSBackingStoreBuffered,
+	NSCommandKeyMask, NSAlternateKeyMask,
+	NSMenu, NSMenuItem,
+	NSGraphicsContext,
+	NSCompositeClear, NSCompositeSourceAtop,
+	NSRectFillUsingOperation, NSFrameRectWithWidth, NSFrameRect, NSEraseRect,
+	NSColor, NSCursor, NSFont,
+	NSFontAttributeName,	NSForegroundColorAttributeName,
+	NSStrokeColorAttributeName, NSStrokeWidthAttributeName,
+	NSUpArrowFunctionKey, NSLeftArrowFunctionKey,
+	NSDownArrowFunctionKey, NSRightArrowFunctionKey,
+	NSHomeFunctionKey, NSEndFunctionKey, NSPageUpFunctionKey, NSPageDownFunctionKey,
+	NSScreen, NSWorkspace,
+)
+from Quartz import (
+	PDFDocument, PDFAnnotationText, PDFAnnotationLink,
+	PDFActionNamed,
+	kPDFActionNamedNextPage, kPDFActionNamedPreviousPage,
+	kPDFActionNamedFirstPage, kPDFActionNamedLastPage,
+	kPDFActionNamedGoBack, kPDFActionNamedGoForward,
+	kPDFDisplayBoxCropBox,
+)
+from WebKit import WebView
+
 
 if sys.version_info[0] == 3:
 	_s = lambda s: s
@@ -422,7 +456,7 @@ class PresenterView(NSView):
 	
 	
 	def keyDown_(self, event):
-		if (event.modifierFlags() & NSAlternateKeyMask):
+		if event.modifierFlags() & NSAlternateKeyMask:
 			c = event.charactersIgnoringModifiers()
 			if c == "i": # reset bbox to identity
 				global bbox
@@ -618,8 +652,8 @@ def toggle_fullscreen(fullscreen=None):
 		fullscreen = not _fullscreen
 	
 	if fullscreen != _fullscreen:
-		for window, screen in reversed(zip([presenter_window, presentation_window],
-		                                   NSScreen.screens())):
+		for window, screen in zip([presenter_window, presentation_window],
+		                          NSScreen.screens()):
 			view = window.contentView()
 			if fullscreen:
 				view.enterFullScreenMode_withOptions_(screen, {})
