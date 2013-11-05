@@ -317,6 +317,8 @@ class PresenterView(NSView):
 	absolute_time = False
 	start_time = time.time()
 	show_help = True
+	annotation_state = None
+	tooltips = []
 	
 	def drawRect_(self, rect):
 		bounds = self.bounds()
@@ -360,7 +362,7 @@ class PresenterView(NSView):
 		self.transform.invert()
 
 		NSGraphicsContext.restoreGraphicsState()
-
+		
 		# screen border
 		NSColor.grayColor().setFill()
 		NSFrameRect(page_rect)
@@ -446,14 +448,39 @@ class PresenterView(NSView):
 	
 	
 	def resetCursorRects(self):
+		# updates rectangles only if needed (so that tooltip timeouts work)
+		annotation_state = (self.transform.transformStruct(), current_page)
+		if self.annotation_state == annotation_state:
+			return
+		self.annotation_state = annotation_state
+		
+		# reset cursor rects and tooltips
+		# (tooltips should be retain/released manually because
+		# NSView.addToolTipRect_owner_userData_ keeps a weak reference
+		# on tooltip; see
+		# http://pythonhosted.org/pyobjc/core/intro.html#reference-counting)
 		self.discardCursorRects()
+		self.removeAllToolTips()
+		for tooltip in self.tooltips:
+			tooltip.release()
+		self.tooltips = []
+		
 		for annotation in self.page.annotations():
 			annotation_type = type(annotation)
-			if annotation_type == PDFAnnotationLink:
-				origin, size = annotation.bounds()
-				rect = (self.transform.transformPoint_(origin),
-				        self.transform.transformSize_(size))
-				self.addCursorRect_cursor_(rect, NSCursor.pointingHandCursor())
+			if annotation_type != PDFAnnotationLink:
+				continue
+
+			origin, size = annotation.bounds()
+			rect = (self.transform.transformPoint_(origin),
+			        self.transform.transformSize_(size))
+			self.addCursorRect_cursor_(rect, NSCursor.pointingHandCursor())
+			
+			tooltip = annotation.toolTip()
+			if tooltip is None:
+				continue
+			
+			self.tooltips.append(tooltip.retain())
+			self.addToolTipRect_owner_userData_(rect, tooltip, None)
 	
 	
 	def keyDown_(self, event):
