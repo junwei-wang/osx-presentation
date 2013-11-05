@@ -455,17 +455,10 @@ class PresenterView(NSView):
 		self.annotation_state = annotation_state
 		
 		# reset cursor rects and tooltips
-		# (tooltips should be retain/released manually because
-		# NSView.addToolTipRect_owner_userData_ keeps a weak reference
-		# on tooltip; see
-		# http://pythonhosted.org/pyobjc/core/intro.html#reference-counting)
 		self.discardCursorRects()
 		self.removeAllToolTips()
-		for tooltip in self.tooltips:
-			tooltip.release()
-		self.tooltips = []
 		
-		for annotation in self.page.annotations():
+		for i, annotation in enumerate(self.page.annotations()):
 			annotation_type = type(annotation)
 			if annotation_type != PDFAnnotationLink:
 				continue
@@ -474,13 +467,13 @@ class PresenterView(NSView):
 			rect = (self.transform.transformPoint_(origin),
 			        self.transform.transformSize_(size))
 			self.addCursorRect_cursor_(rect, NSCursor.pointingHandCursor())
-			
-			tooltip = annotation.toolTip()
-			if tooltip is None:
-				continue
-			
-			self.tooltips.append(tooltip.retain())
-			self.addToolTipRect_owner_userData_(rect, tooltip, None)
+
+			self.addToolTipRect_owner_userData_(rect, self, i)
+	
+	
+	def view_stringForToolTip_point_userData_(self, view, tag, point, data):
+		annotation = self.page.annotations()[data]
+		return annotation.toolTip() or ""
 	
 	
 	def keyDown_(self, event):
