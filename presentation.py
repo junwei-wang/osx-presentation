@@ -218,8 +218,8 @@ def end_page():  goto_page(last_page)
 
 # annotations
 
-notes   = defaultdict(list)
-posters = {}
+notes  = defaultdict(list)
+movies = {}
 for page_number in range(page_count):
 	page = pdf.pageAtIndex_(page_number)
 	page.setDisplaysAnnotations_(False)
@@ -238,7 +238,7 @@ for page_number in range(page_count):
 			movie, error = QTMovie.movieWithURL_error_(url, None)
 			if error:
 				continue
-			posters[annotation] = movie.posterImage()
+			movies[annotation] = movie
 
 
 # page drawing ###############################################################
@@ -252,9 +252,10 @@ def draw_page(page):
 	page.drawWithBox_(kPDFDisplayBoxCropBox)
 
 	for annotation in page.annotations():
-		if not annotation in posters:
+		if not annotation in movies:
 			continue
-		posters[annotation].drawInRect_fromRect_operation_fraction_(
+		poster = movies[annotation].posterImage()
+		poster.drawInRect_fromRect_operation_fraction_(
 			annotation.bounds(), NSZeroRect, NSCompositeCopy, 1.
 		)
 
@@ -484,8 +485,7 @@ class PresenterView(NSView):
 		self.removeAllToolTips()
 		
 		for i, annotation in enumerate(self.page.annotations()):
-			annotation_type = type(annotation)
-			if annotation_type != PDFAnnotationLink:
+			if type(annotation) != PDFAnnotationLink:
 				continue
 
 			origin, size = annotation.bounds()
@@ -705,7 +705,7 @@ def toggle_fullscreen(fullscreen=None):
 				view.enterFullScreenMode_withOptions_(screen, {})
 			else:
 				view.exitFullScreenModeWithOptions_({})
-			window.makeFirstResponder_(view)
+		presenter_window.makeFirstResponder_(view)
 
 	return _fullscreen
 
