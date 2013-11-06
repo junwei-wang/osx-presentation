@@ -26,7 +26,7 @@ from collections import defaultdict
 # constants and helpers ######################################################
 
 NAME = "Présentation"
-MAJOR, MINOR = 0, 8
+MAJOR, MINOR = 0, 9
 VERSION = "%s.%s" % (MAJOR, MINOR)
 HOME = "http://iihm.imag.fr/blanch/software/osx-presentation/"
 CREDITS = """
