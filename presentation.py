@@ -247,7 +247,7 @@ for page_number in range(page_count):
 			movie, error = QTMovie.movieWithURL_error_(url, None)
 			if error:
 				continue
-			movies[annotation] = movie
+			movies[annotation] = (movie, movie.posterImage())
 
 
 # page drawing ###############################################################
@@ -259,13 +259,28 @@ def draw_page(page):
 
 	NSEraseRect(page.boundsForBox_(kPDFDisplayBoxCropBox))
 	page.drawWithBox_(kPDFDisplayBoxCropBox)
-
+	
+	NSColor.blackColor().setFill()
 	for annotation in page.annotations():
 		if not annotation in movies:
 			continue
-		poster = movies[annotation].posterImage()
+		bounds = annotation.bounds()
+		NSRectFillUsingOperation(bounds, NSCompositeCopy)
+		_, poster = movies[annotation]
+		bounds_size = bounds.size
+		poster_size = poster.size()
+		aspect_ratio = ((poster_size.width*bounds_size.height)/
+		                (bounds_size.width*poster_size.height))
+		if aspect_ratio < 1:
+			dw = bounds.size.width * (1.-aspect_ratio)
+			bounds.origin.x += dw/2.
+			bounds.size.width -= dw
+		else:
+			dh = bounds.size.height * (1.-1./aspect_ratio)
+			bounds.origin.y += dh/2.
+			bounds.size.height -= dh
 		poster.drawInRect_fromRect_operation_fraction_(
-			annotation.bounds(), NSZeroRect, NSCompositeCopy, 1.
+			bounds, NSZeroRect, NSCompositeCopy, 1.
 		)
 
 
@@ -604,7 +619,8 @@ class PresenterView(NSView):
 			return
 		
 		if annotation in movies:
-			movie_view.setMovie_(movies[annotation])
+			movie, _ = movies[annotation]
+			movie_view.setMovie_(movie)
 			presentation_show(movie_view)
 			return
 			
@@ -823,7 +839,9 @@ class ApplicationDelegate(NSObject):
 	
 	def applicationDidUnhide_(self, notification):
 		toggle_fullscreen(fullscreen=self.fullscreen)
-
+	
+	def applicationWillTerminate_(self, notification):
+		presentation_show()
 
 application_delegate = ApplicationDelegate.alloc().init()
 app.setDelegate_(application_delegate)
