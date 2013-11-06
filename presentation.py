@@ -103,6 +103,7 @@ from Foundation import (
 	NSURL, NSURLRequest, NSURLConnection,
 	NSAffineTransform, NSMakeSize,
 )
+
 from AppKit import (
 	NSApplication,
 	NSOpenPanel, NSFileHandlingPanelOKButton,
@@ -123,9 +124,11 @@ from AppKit import (
 	NSStrokeColorAttributeName, NSStrokeWidthAttributeName,
 	NSUpArrowFunctionKey, NSLeftArrowFunctionKey,
 	NSDownArrowFunctionKey, NSRightArrowFunctionKey,
-	NSHomeFunctionKey, NSEndFunctionKey, NSPageUpFunctionKey, NSPageDownFunctionKey,
+	NSHomeFunctionKey, NSEndFunctionKey,
+	NSPageUpFunctionKey, NSPageDownFunctionKey,
 	NSScreen, NSWorkspace,
 )
+
 from Quartz import (
 	PDFDocument, PDFAnnotationText, PDFAnnotationLink,
 	PDFActionNamed,
@@ -134,8 +137,14 @@ from Quartz import (
 	kPDFActionNamedGoBack, kPDFActionNamedGoForward,
 	kPDFDisplayBoxCropBox,
 )
-from WebKit import WebView
-from QTKit import QTMovie
+
+from WebKit import (
+	WebView,
+)
+
+from QTKit import (
+	QTMovie, QTMovieView,
+)
 
 
 if sys.version_info[0] == 3:
@@ -179,7 +188,7 @@ future_pages = []
 def _goto(page):
 	global current_page
 	current_page = page
-	toggle_web_view(visible=False)
+	presentation_show(slide_view)
 
 def _pop_push_page(pop_pages, push_pages):
 	def action():
@@ -431,6 +440,8 @@ class PresenterView(NSView):
 				h		hide
 				q		quit
 				w		toggle web view
+				m		toogle movie view
+				s		show slide view
 				f		toggle fullscreen
 				⎋		leave fullscreen
 				←/↑		previous page
@@ -544,6 +555,8 @@ class PresenterView(NSView):
 			action = {
 				"f":                     toggle_fullscreen,
 				"w":                     toggle_web_view,
+				"m":                     toggle_movie_view,
+				"s":                     presentation_show,
 				NSUpArrowFunctionKey:    prev_page,
 				NSLeftArrowFunctionKey:  prev_page,
 				NSDownArrowFunctionKey:  next_page,
@@ -589,7 +602,12 @@ class PresenterView(NSView):
 
 		if type(annotation) != PDFAnnotationLink:
 			return
-
+		
+		if annotation in movies:
+			movie_view.setMovie_(movies[annotation])
+			presentation_show(movie_view)
+			return
+			
 		action = annotation.mouseUpAction()
 		destination = annotation.destination()
 		url = annotation.URL()
@@ -655,23 +673,40 @@ frame = presentation_view.frame()
 slide_view = SlideView.alloc().initWithFrame_(frame)
 add_subview(presentation_view, slide_view)
 
+def presentation_show(visible_view=slide_view):
+	for view in [slide_view, web_view, movie_view]:
+		view.setHidden_(view != visible_view)
+
 # web view
 
 web_view = WebView.alloc().initWithFrame_frameName_groupName_(frame, nil, nil)
-def toggle_web_view(visible=None):
-	if visible is None:
-		visible = web_view.isHidden()
-	slide_view.setHidden_(visible)
-	web_view.setHidden_(not visible)
-toggle_web_view(False)
+def toggle_web_view():
+	presentation_show(web_view if web_view.isHidden() else slide_view)
 
 class WebFrameLoadDelegate(NSObject):
 	def webView_didCommitLoadForFrame_(self, view, frame):
-		toggle_web_view(visible=True)
+		presentation_show(web_view)
 web_frame_load_delegate = WebFrameLoadDelegate.alloc().init()
 web_view.setFrameLoadDelegate_(web_frame_load_delegate)
 
 add_subview(presentation_view, web_view)
+
+# movie view
+
+class MovieView(QTMovieView):
+	def setHidden_(self, hidden):
+		QTMovieView.setHidden_(self, hidden)
+		if self.isHidden():
+			self.pause_(self)
+		else:
+			self.play_(self)
+
+movie_view = MovieView.alloc().initWithFrame_(frame)
+movie_view.setPreservesAspectRatio_(True)
+def toggle_movie_view():
+	presentation_show(movie_view if movie_view.isHidden() else slide_view)
+
+add_subview(presentation_view, movie_view)
 
 # message view
 
@@ -679,6 +714,8 @@ if show_feed:
 	frame.size.height = 40
 	message_view = MessageView.alloc().initWithFrame_(frame)
 	add_subview(presentation_view, message_view, NSViewWidthSizable)
+
+presentation_show()
 
 
 # presenter window ###########################################################
@@ -705,7 +742,7 @@ def toggle_fullscreen(fullscreen=None):
 				view.enterFullScreenMode_withOptions_(screen, {})
 			else:
 				view.exitFullScreenModeWithOptions_({})
-		presenter_window.makeFirstResponder_(view)
+		presenter_window.makeFirstResponder_(presenter_view)
 
 	return _fullscreen
 
