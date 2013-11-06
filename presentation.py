@@ -115,8 +115,9 @@ from AppKit import (
 	NSCommandKeyMask, NSAlternateKeyMask,
 	NSMenu, NSMenuItem,
 	NSGraphicsContext,
-	NSCompositeClear, NSCompositeSourceAtop,
+	NSCompositeClear, NSCompositeSourceAtop, NSCompositeCopy,
 	NSRectFillUsingOperation, NSFrameRectWithWidth, NSFrameRect, NSEraseRect,
+	NSZeroRect,
 	NSColor, NSCursor, NSFont,
 	NSFontAttributeName,	NSForegroundColorAttributeName,
 	NSStrokeColorAttributeName, NSStrokeWidthAttributeName,
@@ -134,6 +135,7 @@ from Quartz import (
 	kPDFDisplayBoxCropBox,
 )
 from WebKit import WebView
+from QTKit import QTMovie
 
 
 if sys.version_info[0] == 3:
@@ -214,19 +216,47 @@ def home_page(): goto_page(first_page)
 def end_page():  goto_page(last_page)
 
 
-# notes
+# annotations
 
-notes = defaultdict(list)
+notes   = defaultdict(list)
+posters = {}
 for page_number in range(page_count):
 	page = pdf.pageAtIndex_(page_number)
 	page.setDisplaysAnnotations_(False)
 	for annotation in page.annotations():
-		if type(annotation) == PDFAnnotationText:
+		annotation_type = type(annotation)
+		if annotation_type == PDFAnnotationText:
 			notes[page_number].append(annotation.contents())
+		elif annotation_type == PDFAnnotationLink:
+			url = annotation.URL()
+			if not url:
+				continue
+			if url.scheme() != "file":
+				continue
+			if not QTMovie.canInitWithURL_(url):
+				continue
+			movie, error = QTMovie.movieWithURL_error_(url, None)
+			if error:
+				continue
+			posters[annotation] = movie.posterImage()
 
-# bbox
+
+# page drawing ###############################################################
 
 bbox = NSAffineTransform.transform()
+
+def draw_page(page):
+	bbox.concat()
+
+	NSEraseRect(page.boundsForBox_(kPDFDisplayBoxCropBox))
+	page.drawWithBox_(kPDFDisplayBoxCropBox)
+
+	for annotation in page.annotations():
+		if not annotation in posters:
+			continue
+		posters[annotation].drawInRect_fromRect_operation_fraction_(
+			annotation.bounds(), NSZeroRect, NSCompositeCopy, 1.
+		)
 
 
 # presentation ###############################################################
@@ -250,10 +280,7 @@ class SlideView(NSView):
 		transform.scaleXBy_yBy_(r, r)
 		transform.translateXBy_yBy_(-w/2., -h/2.)
 		transform.concat()
-		bbox.concat()
-
-		NSEraseRect(page_rect)
-		page.drawWithBox_(kPDFDisplayBoxCropBox)
+		draw_page(page)
 		NSGraphicsContext.restoreGraphicsState()
 
 
@@ -313,6 +340,7 @@ class MessageView(NSView):
 # presenter view #############################################################
 
 class PresenterView(NSView):
+	transform = NSAffineTransform.transform()
 	duration = presentation_duration * 60. + 1.
 	absolute_time = False
 	start_time = time.time()
@@ -345,15 +373,12 @@ class PresenterView(NSView):
 		
 		NSGraphicsContext.saveGraphicsState()
 		
-		bbox.concat()
-		NSEraseRect(page_rect)
-		self.page.drawWithBox_(kPDFDisplayBoxCropBox)
+		draw_page(self.page)
 		
 		# links
 		NSColor.blueColor().setFill()
 		for annotation in self.page.annotations():
-			annotation_type = type(annotation)
-			if annotation_type == PDFAnnotationLink:
+			if type(annotation) == PDFAnnotationLink:
 				NSFrameRectWithWidth(annotation.bounds(), .5)
 
 		self.transform = transform
@@ -589,7 +614,7 @@ class PresenterView(NSView):
 		
 		elif url:
 			web_view.mainFrame().loadRequest_(NSURLRequest.requestWithURL_(url))
-
+		
 		refresher.refresh_()
 
 
@@ -641,7 +666,7 @@ def toggle_web_view(visible=None):
 toggle_web_view(False)
 
 class WebFrameLoadDelegate(NSObject):
-	def webView_didFinishLoadForFrame_(self, view, frame):
+	def webView_didCommitLoadForFrame_(self, view, frame):
 		toggle_web_view(visible=True)
 web_frame_load_delegate = WebFrameLoadDelegate.alloc().init()
 web_view.setFrameLoadDelegate_(web_frame_load_delegate)
