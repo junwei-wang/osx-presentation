@@ -35,7 +35,8 @@ Licence: <a href='http://www.gnu.org/licenses/gpl-3.0.txt'>GPLv3</a>+
 """ % HOME
 COPYRIGHT = "Copyright © 2011-2013 Renaud Blanch"
 
-PRESENTER_FRAME = ((100., 100.), (1024., 768.))
+PRESENTER_FRAME   = ((100., 100.), (1024., 768.))
+MIN_POSTER_HEIGHT = 20.
 
 def nop(): pass
 
@@ -145,6 +146,10 @@ from WebKit import (
 from QTKit import (
 	QTMovie, QTMovieView,
 )
+
+# QTKit is deprecated in 10.9 but AVFoundation will only be in PyObjC-3.0+
+# so wait and see, and remember for future reference:
+# https://developer.apple.com/library/mac/technotes/tn2300/_index.html
 
 
 if sys.version_info[0] == 3:
@@ -265,9 +270,17 @@ def draw_page(page):
 		if not annotation in movies:
 			continue
 		bounds = annotation.bounds()
-		NSRectFillUsingOperation(bounds, NSCompositeCopy)
+
 		_, poster = movies[annotation]
+		if poster is None:
+			continue
+
 		bounds_size = bounds.size
+		if bounds_size.height < MIN_POSTER_HEIGHT:
+			continue
+		
+		NSRectFillUsingOperation(bounds, NSCompositeCopy)
+		
 		poster_size = poster.size()
 		aspect_ratio = ((poster_size.width*bounds_size.height)/
 		                (bounds_size.width*poster_size.height))
@@ -279,6 +292,7 @@ def draw_page(page):
 			dh = bounds.size.height * (1.-1./aspect_ratio)
 			bounds.origin.y += dh/2.
 			bounds.size.height -= dh
+		
 		poster.drawInRect_fromRect_operation_fraction_(
 			bounds, NSZeroRect, NSCompositeCopy, 1.
 		)
@@ -371,7 +385,6 @@ class PresenterView(NSView):
 	start_time = time.time()
 	show_help = True
 	annotation_state = None
-	tooltips = []
 	
 	def drawRect_(self, rect):
 		bounds = self.bounds()
@@ -455,7 +468,7 @@ class PresenterView(NSView):
 				h		hide
 				q		quit
 				w		toggle web view
-				m		toogle movie view
+				m		toggle movie view
 				s		show slide view
 				f		toggle fullscreen
 				⎋		leave fullscreen
