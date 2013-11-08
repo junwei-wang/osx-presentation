@@ -380,9 +380,11 @@ class MessageView(NSView):
 
 class PresenterView(NSView):
 	transform = NSAffineTransform.transform()
-	duration = presentation_duration * 60. + 1.
-	absolute_time = False
+	duration = presentation_duration * 60.
+	absolute_time = True
+	elapsed_duration = 0
 	start_time = time.time()
+	duration_change_time = 0
 	show_help = True
 	annotation_state = None
 	
@@ -433,10 +435,15 @@ class PresenterView(NSView):
 		
 
 		# time
-		if self.absolute_time:
-			clock = time.localtime()
+		now = time.time()
+		if now - self.duration_change_time <= 1: # duration changed, display it
+			clock = self.duration
+		elif self.absolute_time:
+			clock = now
 		else:
-			clock = time.gmtime(abs(self.duration - (time.time() - self.start_time)))
+			runing_duration = now - self.start_time + self.elapsed_duration
+			clock = abs(self.duration - runing_duration)
+		clock = time.gmtime(clock)
 		clock = NSString.stringWithString_(time.strftime("%H:%M:%S", clock))
 		clock.drawAtPoint_withAttributes_((margin, height-1.4*margin), {
 			NSFontAttributeName:            NSFont.labelFontOfSize_(margin),
@@ -477,7 +484,7 @@ class PresenterView(NSView):
 				⇟		forward
 				↖		first page
 				↘		last page
-				t		switch between clock and timer
+				t/sp		start/stop timer
 				z		set origin for timer
 				[/]		sub/add 1 minute to planned time
 				{/}		sub/add 10 minutes
@@ -557,23 +564,27 @@ class PresenterView(NSView):
 		elif c == "?":
 			self.show_help = not self.show_help
 		
-		elif c == "t": # switch time representation
+		elif c in "t ": # toogle clock/timer
 			self.absolute_time = not self.absolute_time
+			now = time.time()
+			if self.absolute_time:
+				self.elapsed_duration += (now - self.start_time)
+			else:
+				self.start_time = now
 
-		elif c == "z": # reset timer
+		elif c in "z[]{}": # reset timer
 			self.start_time = time.time()
-		
-		elif c == "[":
-			self.duration -= 60.
-		
-		elif c == "]":
-			self.duration += 60.
-
-		elif c == "{":
-			self.duration -= 600.
-		
-		elif c == "}":
-			self.duration += 600.
+			self.elapsed_duration = 0
+			
+			self.duration += {
+				"{": -600,
+				"[":  -60,
+				"z":    0,
+				"]":   60,
+				"}":  600,
+			}[c]
+			self.duration = max(0, self.duration)
+			self.duration_change_time = time.time()
 		
 		else:
 			action = {
