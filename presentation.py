@@ -821,7 +821,7 @@ class ApplicationDelegate(NSObject):
 			).runModal()
 			return
 		
-		version = bytearray(data).decode("utf-8")
+		version = bytearray(data).decode("utf-8").strip()
 		if version == VERSION:
 			title   = "No update available"
 			message = "Your version (%@) of %@ is up to date."
