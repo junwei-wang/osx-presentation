@@ -473,6 +473,7 @@ class PresenterView(NSView):
 			help_text = NSString.stringWithString_(_s(textwrap.dedent("""\
 				?		show/hide this help
 				h		hide
+				q		quit
 				w		toggle web view
 				m		toggle movie view
 				s		show slide view
@@ -554,7 +555,10 @@ class PresenterView(NSView):
 				bbox = NSAffineTransform.transform()
 		
 		c = event.characters()
-
+		
+		if c == "q":
+			app.terminate_(self)
+		
 		if c == chr(27): # esc
 			toggle_fullscreen(fullscreen=False)
 		
