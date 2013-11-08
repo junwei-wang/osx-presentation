@@ -274,7 +274,7 @@ def draw_page(page):
 		_, poster = movies[annotation]
 		if poster is None:
 			continue
-
+		
 		bounds_size = bounds.size
 		if bounds_size.height < MIN_POSTER_HEIGHT:
 			continue
@@ -556,10 +556,10 @@ class PresenterView(NSView):
 		
 		c = event.characters()
 		
-		if c == "q":
+		if c == "q": # quit
 			app.terminate_(self)
 		
-		if c == chr(27): # esc
+		elif c == chr(27): # esc
 			toggle_fullscreen(fullscreen=False)
 		
 		elif c == "h":
