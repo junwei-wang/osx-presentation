@@ -18,6 +18,7 @@ import time
 import select
 import getopt
 import textwrap
+import mimetypes
 
 from math import exp
 from collections import defaultdict
@@ -232,6 +233,20 @@ def end_page():  goto_page(last_page)
 
 # annotations
 
+def get_movie(url):
+	"""return a QTMovie object from an url if possible/desirable"""
+	if not (url and url.scheme() == "file"):
+		return
+	mimetype, _ = mimetypes.guess_type(url.absoluteString())
+	if not (mimetype and mimetype.startswith("video")):
+		return
+	if not QTMovie.canInitWithURL_(url):
+		return
+	movie, error = QTMovie.movieWithURL_error_(url, None)
+	if error:
+		return
+	return movie
+
 notes  = defaultdict(list)
 movies = {}
 for page_number in range(page_count):
@@ -242,17 +257,9 @@ for page_number in range(page_count):
 		if annotation_type == PDFAnnotationText:
 			notes[page_number].append(annotation.contents())
 		elif annotation_type == PDFAnnotationLink:
-			url = annotation.URL()
-			if not url:
-				continue
-			if url.scheme() != "file":
-				continue
-			if not QTMovie.canInitWithURL_(url):
-				continue
-			movie, error = QTMovie.movieWithURL_error_(url, None)
-			if error:
-				continue
-			movies[annotation] = (movie, movie.posterImage())
+			movie = get_movie(annotation.URL())
+			if movie:
+				movies[annotation] = (movie, movie.posterImage())
 
 
 # page drawing ###############################################################
