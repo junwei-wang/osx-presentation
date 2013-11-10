@@ -28,6 +28,14 @@ $(app): $(script)
 	<plist version='1.0'> \
 	<dict> \
 		<key>CFBundleExecutable</key><string>$^</string> \
+		<key>CFBundleDocumentTypes</key><array><dict> \
+			<key>CFBundleTypeName</key><string>Adobe PDF document</string> \
+			<key>LSItemContentTypes</key><array> \
+				<string>com.adobe.pdf</string> \
+			</array> \
+			<key>CFBundleTypeRole</key><string>Viewer</string> \
+			<key>LSHandlerRank</key><string>Alternate</string> \
+		</dict></array> \
 		<key>CFBundleShortVersionString</key><string>$(VERSION).0</string> \
 		<key>NSHumanReadableCopyright</key><string>Copyright © 2011-2013 Renaud Blanch</string> \
 	</dict> \

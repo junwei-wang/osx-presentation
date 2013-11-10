@@ -46,10 +46,10 @@ def nop(): pass
 
 name, args = sys.argv[0], sys.argv[1:]
 
-if args and args[0].startswith("-psn"):
-	# we have been launched by the finder, ignore this command line switch
-	args = args[1:]
-
+# ignore "-psn" arg if we have been launched by the finder
+launched_from_finder = any(arg.startswith("-psn") for arg in args)
+if launched_from_finder:
+	args = [arg for arg in args if not arg.startswith("-psn")]
 
 def exit_usage(message=None, code=0):
 	usage = textwrap.dedent("""\
@@ -162,6 +162,20 @@ else:
 
 app = NSApplication.sharedApplication()
 app.activateIgnoringOtherApps_(True)
+
+if launched_from_finder:
+	# HACK: run application to get dropped filename if any and then stop it
+	class DropApplicationDelegate(NSObject):
+		def application_openFile_(self, app, filename):
+			filename = filename.encode("utf-8")
+			if filename != os.path.abspath(__file__):
+				args.append(filename)
+		def applicationDidFinishLaunching_(self, notification):
+			app.stop_(self)
+	application_delegate = DropApplicationDelegate.alloc().init()
+	app.setDelegate_(application_delegate)
+	app.run()
+
 
 if args:
 	url = NSURL.fileURLWithPath_(args[0])
@@ -720,15 +734,9 @@ frame = presentation_view.frame()
 slide_view = SlideView.alloc().initWithFrame_(frame)
 add_subview(presentation_view, slide_view)
 
-def presentation_show(visible_view=slide_view):
-	for view in [slide_view, web_view, movie_view]:
-		view.setHidden_(view != visible_view)
-
 # web view
 
 web_view = WebView.alloc().initWithFrame_frameName_groupName_(frame, nil, nil)
-def toggle_web_view():
-	presentation_show(web_view if web_view.isHidden() else slide_view)
 
 class WebFrameLoadDelegate(NSObject):
 	def webView_didCommitLoadForFrame_(self, view, frame):
@@ -750,8 +758,6 @@ class MovieView(QTMovieView):
 
 movie_view = MovieView.alloc().initWithFrame_(frame)
 movie_view.setPreservesAspectRatio_(True)
-def toggle_movie_view():
-	presentation_show(movie_view if movie_view.isHidden() else slide_view)
 
 add_subview(presentation_view, movie_view)
 
@@ -761,6 +767,19 @@ if show_feed:
 	frame.size.height = 40
 	message_view = MessageView.alloc().initWithFrame_(frame)
 	add_subview(presentation_view, message_view, NSViewWidthSizable)
+
+
+# views visibility
+
+def presentation_show(visible_view=slide_view):
+	for view in [slide_view, web_view, movie_view]:
+		view.setHidden_(view != visible_view)
+
+def toggle_view(view):
+	presentation_show(view if view.isHidden() else slide_view)
+
+def toggle_web_view():   toggle_view(web_view)
+def toggle_movie_view(): toggle_view(movie_view)
 
 presentation_show()
 
