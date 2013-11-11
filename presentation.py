@@ -47,9 +47,9 @@ def nop(): pass
 name, args = sys.argv[0], sys.argv[1:]
 
 # ignore "-psn" arg if we have been launched by the finder
-launched_from_finder = any(arg.startswith("-psn") for arg in args)
+launched_from_finder = args and args[0].startswith("-psn")
 if launched_from_finder:
-	args = [arg for arg in args if not arg.startswith("-psn")]
+	args = args[1:]
 
 def exit_usage(message=None, code=0):
 	usage = textwrap.dedent("""\
