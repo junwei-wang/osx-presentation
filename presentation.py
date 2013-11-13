@@ -39,6 +39,27 @@ COPYRIGHT = "Copyright © 2011-2013 Renaud Blanch"
 PRESENTER_FRAME   = ((100., 100.), (1024., 768.))
 MIN_POSTER_HEIGHT = 20.
 
+HELP = [
+	("?",       "show/hide this help"),
+	("h",       "hide"),
+	("q",       "quit"),
+	("w",       "toggle web view"),
+	("m",       "toggle movie view"),
+	("s",       "show slide view"),
+	("f",       "toggle fullscreen"),
+	("⎋",       "leave fullscreen"),
+	("←/↑",     "previous page"),
+	("→/↓",     "next page"),
+	("⇞",       "back"),
+	("⇟",       "forward"),
+	("↖",       "first page"),
+	("↘",       "last page"),
+	("t/space", "start/stop timer"),
+	("z",       "set origin for timer"),
+	("[/]",     "sub/add  1 minute to planned time"),
+	("{/}",     "sub/add 10 minutes"),
+]
+
 def nop(): pass
 
 
@@ -101,7 +122,8 @@ setVerbose(1)
 
 from objc import nil, NO, YES
 from Foundation import (
-	NSObject, NSTimer, NSError, NSString, NSAttributedString,
+	NSObject, NSTimer, NSError, NSString,
+	NSAttributedString, NSUnicodeStringEncoding,
 	NSURL, NSURLRequest, NSURLConnection,
 	NSAffineTransform, NSMakeSize,
 )
@@ -154,10 +176,15 @@ from QTKit import (
 
 
 if sys.version_info[0] == 3:
-	_s = lambda s: s
+	_s = NSString.stringWithString_
 	sys.stdin = sys.stdin.detach() # so that sys.stdin.readline returns bytes
 else:
 	_s = NSString.alloc().initWithUTF8String_
+
+def _h(s):
+	h, _ = NSAttributedString.alloc().initWithHTML_documentAttributes_(
+		_s(s).dataUsingEncoding_(NSUnicodeStringEncoding), None)
+	return h
 
 
 app = NSApplication.sharedApplication()
@@ -491,30 +518,14 @@ class PresenterView(NSView):
 		
 		# help
 		if self.show_help:
-			help_text = NSString.stringWithString_(_s(textwrap.dedent("""\
-				?		show/hide this help
-				h		hide
-				q		quit
-				w		toggle web view
-				m		toggle movie view
-				s		show slide view
-				f		toggle fullscreen
-				⎋		leave fullscreen
-				←/↑		previous page
-				→/↓		next page
-				⇞		back
-				⇟		forward
-				↖		first page
-				↘		last page
-				t/sp		start/stop timer
-				z		set origin for timer
-				[/]		sub/add 1 minute to planned time
-				{/}		sub/add 10 minutes
-			""")))
-			help_text.drawAtPoint_withAttributes_((2*margin+current_width, font_size), {
-				NSFontAttributeName:            NSFont.labelFontOfSize_(font_size/3.),
-				NSForegroundColorAttributeName: NSColor.whiteColor(),
-			})
+			help_text = _h("".join([
+				"<table style='color: white; font-family: LucidaGrande;'>"
+			] + [
+				"<tr><th style='padding: 0 1em;' align='right'>%s</th><td>%s</td></tr>" % h for h in HELP
+			] + [
+				"</table>"
+			]))
+			help_text.drawAtPoint_((2*margin+current_width, font_size))
 		
 		# next page
 		try:
@@ -826,13 +837,12 @@ def add_item(menu, title, action, key="", modifiers=NSCommandKeyMask, target=app
 	
 class ApplicationDelegate(NSObject):
 	def about_(self, sender):
-		credits, _ = NSAttributedString.alloc().initWithHTML_documentAttributes_(bytearray(CREDITS, "utf8"), None)
 		app.orderFrontStandardAboutPanelWithOptions_({
 			"ApplicationName":    _s(NAME),
 			"Version":            _s(VERSION),
 			"Copyright":          _s(COPYRIGHT),
 			"ApplicationVersion": _s("%s %s" % (NAME, VERSION)),
-			"Credits":            credits,
+			"Credits":            _h(CREDITS),
 		})
 	
 	def update_(self, sender):
