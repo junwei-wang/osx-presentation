@@ -58,6 +58,7 @@ HELP = [
 	("z",       "set origin for timer"),
 	("[/]",     "sub/add  1 minute to planned time"),
 	("{/}",     "sub/add 10 minutes"),
+	("+/-/0",   "zoom in/out/reset web view"),
 ]
 
 def nop(): pass
@@ -608,7 +609,7 @@ class PresenterView(NSView):
 			else:
 				self.start_time = now
 
-		elif c in "z[]{}": # reset timer
+		elif c in "z[]{}": # timer management
 			self.start_time = time.time()
 			self.elapsed_duration = 0
 			
@@ -621,6 +622,18 @@ class PresenterView(NSView):
 			}[c]
 			self.duration = max(0, self.duration)
 			self.duration_change_time = time.time()
+		
+		elif c in "+=-_0": # web view scale
+			document = web_view.mainFrame().frameView().documentView()
+			clip = document.superview()
+			if c in "+=":
+				scale = (1.1, 1.1)
+			elif c in "-_":
+				scale = (1./1.1, 1./1.1)
+			else:
+				scale = clip.convertSize_fromView_((1., 1.), None)
+			clip.scaleUnitSquareToSize_(scale)
+			document.setNeedsLayout_(True)
 		
 		else:
 			action = {
