@@ -57,7 +57,7 @@ $(icon): $(iconset)
 
 $(iconset): $(script)
 	mkdir -p $@
-	./$< --icon > $@/icon_128x128.png
+	./$< --icon > $@/icon_256x256.png
 
 archive:
 	hg archive -r $(VERSION) -t tbz2 $@
