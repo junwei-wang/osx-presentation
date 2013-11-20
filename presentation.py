@@ -503,13 +503,12 @@ class PresenterView(NSView):
 		# time
 		now = time.time()
 		if now - self.duration_change_time <= 1: # duration changed, display it
-			clock = self.duration
+			clock = time.gmtime(self.duration)
 		elif self.absolute_time:
-			clock = now
+			clock = time.localtime(now)
 		else:
 			runing_duration = now - self.start_time + self.elapsed_duration
-			clock = abs(self.duration - runing_duration)
-		clock = time.gmtime(clock)
+			clock = time.gmtime(abs(self.duration - runing_duration))
 		clock = NSString.stringWithString_(time.strftime("%H:%M:%S", clock))
 		clock.drawAtPoint_withAttributes_((margin, height-1.4*margin), {
 			NSFontAttributeName:            NSFont.labelFontOfSize_(margin),
