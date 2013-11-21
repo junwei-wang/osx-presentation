@@ -208,6 +208,8 @@ ICON = NSImage.alloc().initWithData_(NSData.alloc().initWithBase64Encoding_(ICON
 app = NSApplication.sharedApplication()
 app.activateIgnoringOtherApps_(True)
 
+restarted = False # has the application been restarted before actual launch
+
 if launched_from_finder:
 	# HACK: run application to get dropped filename if any and then stop it
 	class DropApplicationDelegate(NSObject):
@@ -220,6 +222,7 @@ if launched_from_finder:
 	application_delegate = DropApplicationDelegate.alloc().init()
 	app.setDelegate_(application_delegate)
 	app.run()
+	restarted = True
 
 
 if args:
@@ -238,6 +241,7 @@ else:
 	opener = Opener.alloc().init()
 	opener.performSelectorOnMainThread_withObject_waitUntilDone_("getURL", None, False)
 	app.run()
+	restarted = True
 
 
 # opening presentation
@@ -947,7 +951,7 @@ app.setDelegate_(application_delegate)
 
 
 # HACK: ensure ApplicationDelegate.applicationDidFinishLaunching_ is called
-if launched_from_finder:
+if restarted:
 	NSNotificationCenter.defaultCenter().postNotificationName_object_(
 		NSApplicationDidFinishLaunchingNotification, app)
 
