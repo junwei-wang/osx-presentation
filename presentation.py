@@ -225,12 +225,19 @@ if launched_from_finder:
 if args:
 	url = NSURL.fileURLWithPath_(args[0])
 else:
-	dialog = NSOpenPanel.openPanel()
-	dialog.setAllowedFileTypes_(["pdf"])
-	if dialog.runModal() == NSFileHandlingPanelOKButton:
-		url, = dialog.URLs()
-	else:
-		exit_usage("please select a pdf file", 1)
+	class Opener(NSObject):
+		def getURL(self):
+			dialog = NSOpenPanel.openPanel()
+			dialog.setAllowedFileTypes_(["pdf"])
+			if dialog.runModal() == NSFileHandlingPanelOKButton:
+				global url
+				url, = dialog.URLs()
+			else:
+				exit_usage("please select a pdf file", 1)
+			app.stop_(self)
+	opener = Opener.alloc().init()
+	opener.performSelectorOnMainThread_withObject_waitUntilDone_("getURL", None, False)
+	app.run()
 
 
 # opening presentation
