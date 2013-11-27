@@ -44,25 +44,27 @@ PRESENTER_FRAME   = ((100., 100.), (1024., 768.))
 MIN_POSTER_HEIGHT = 20.
 
 HELP = [
-	("?",       "show/hide this help"),
-	("h",       "hide"),
-	("q",       "quit"),
-	("w",       "toggle web view"),
-	("m",       "toggle movie view"),
-	("s",       "show slide view"),
-	("f",       "toggle fullscreen"),
-	("⎋",       "leave fullscreen"),
-	("←/↑",     "previous page"),
-	("→/↓",     "next page"),
-	("⇞",       "back"),
-	("⇟",       "forward"),
-	("↖",       "first page"),
-	("↘",       "last page"),
-	("t/space", "start/stop timer"),
-	("z",       "set origin for timer"),
-	("[/]",     "sub/add  1 minute to planned time"),
-	("{/}",     "sub/add 10 minutes"),
-	("+/-/0",   "zoom in/out/reset web view"),
+	("?",         "show/hide this help"),
+	("h",         "hide"),
+	("q",         "quit"),
+	("w",         "toggle web view"),
+	("m",         "toggle movie view"),
+	("s",         "show slide view"),
+	("f",         "toggle fullscreen"),
+	("⎋",         "leave fullscreen"),
+	("←/↑",       "previous page"),
+	("→/↓",       "next page"),
+	("⇞",         "back"),
+	("⇟",         "forward"),
+	("↖",         "first page"),
+	("↘",         "last page"),
+	("t/space",   "start/stop timer"),
+	("z",         "set origin for timer"),
+	("[/]",       "sub/add  1 minute to planned time"),
+	("{/}",       "sub/add 10 minutes"),
+	("+/-/0",     "zoom in/out/reset web view"),
+	("space",     "play/pause video (while in movie mode)"),
+	("&lt;/&gt;", "step video backward/forward"),
 ]
 
 def nop(): pass
@@ -145,7 +147,7 @@ from Foundation import (
 )
 
 from AppKit import (
-	NSApplication,
+	NSApplication, NSEvent,
 	NSApplicationDidFinishLaunchingNotification,
 	NSOpenPanel, NSFileHandlingPanelOKButton,
 	NSAlert, NSAlertDefaultReturn,
@@ -547,13 +549,13 @@ class PresenterView(NSView):
 		# help
 		if self.show_help:
 			help_text = _h("".join([
-				"<table style='color: white; font-family: LucidaGrande;'>"
+				"<table style='color: white; font-family: LucidaGrande; font-size: 8pt;'>"
 			] + [
 				"<tr><th style='padding: 0 1em;' align='right'>%s</th><td>%s</td></tr>" % h for h in HELP
 			] + [
 				"</table>"
 			]))
-			help_text.drawAtPoint_((2*margin+current_width, font_size))
+			help_text.drawAtPoint_((2*margin+current_width, 0))
 		
 		# next page
 		try:
@@ -628,13 +630,35 @@ class PresenterView(NSView):
 		elif c == "?":
 			self.show_help = not self.show_help
 		
-		elif c in "t ": # toogle clock/timer
-			self.absolute_time = not self.absolute_time
-			now = time.time()
-			if self.absolute_time:
-				self.elapsed_duration += (now - self.start_time)
+		elif c == " ": # play/pause video
+			if movie_view.isHidden(): # or toggle timer
+				app.sendEvent_(NSEvent.keyEventWithType_location_modifierFlags_timestamp_windowNumber_context_characters_charactersIgnoringModifiers_isARepeat_keyCode_(
+					event.type(), event.locationInWindow(), event.modifierFlags(), event.timestamp(), event.windowNumber(), event.context(),
+					"t", "t", event.isARepeat(), ord("t")))
+				return
+
+			playing = movie_view.movie().rate() > 0.
+			if playing:
+				movie_view.pause_(self)
 			else:
-				self.start_time = now
+				movie_view.play_(self)
+		
+		elif c in "<>": # movie navigation
+			if movie_view.isHidden():
+				return
+			movie_view.pause_(self)
+			if c == "<":
+				movie_view.stepBackward_(self)
+			else:
+				movie_view.stepForward_(self)
+		
+		elif c == "t": # toggle clock/timer
+				self.absolute_time = not self.absolute_time
+				now = time.time()
+				if self.absolute_time:
+					self.elapsed_duration += (now - self.start_time)
+				else:
+					self.start_time = now
 
 		elif c in "z[]{}": # timer management
 			self.start_time = time.time()
@@ -651,11 +675,14 @@ class PresenterView(NSView):
 			self.duration_change_time = time.time()
 		
 		elif c in "+=-_0": # web view scale
+			if c == "=": c = "+"
+			if c == "_": c = "-"
+			
 			document = web_view.mainFrame().frameView().documentView()
 			clip = document.superview()
-			if c in "+=":
+			if c == "+":
 				scale = (1.1, 1.1)
-			elif c in "-_":
+			elif c == "-":
 				scale = (1./1.1, 1./1.1)
 			else:
 				scale = clip.convertSize_fromView_((1., 1.), None)
@@ -717,6 +744,7 @@ class PresenterView(NSView):
 			movie, _ = movies[annotation]
 			movie_view.setMovie_(movie)
 			presentation_show(movie_view)
+			movie_view.play_(self)
 			return
 			
 		action = annotation.mouseUpAction()
@@ -803,8 +831,6 @@ class MovieView(QTMovieView):
 		QTMovieView.setHidden_(self, hidden)
 		if self.isHidden():
 			self.pause_(self)
-		else:
-			self.play_(self)
 
 movie_view = MovieView.alloc().initWithFrame_(frame)
 movie_view.setPreservesAspectRatio_(True)
