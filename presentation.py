@@ -527,6 +527,7 @@ class PresenterView(NSView):
 			NSFontAttributeName:            NSFont.labelFontOfSize_(margin),
 			NSForegroundColorAttributeName: NSColor.whiteColor(),
 		})
+		app.dockTile().setBadgeLabel_(clock)
 	
 		# page number
 		page_number = NSString.stringWithString_("%s (%s/%s)" % (
