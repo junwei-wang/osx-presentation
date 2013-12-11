@@ -654,12 +654,12 @@ class PresenterView(NSView):
 				movie_view.stepForward_(self)
 		
 		elif c == "t": # toggle clock/timer
-				self.absolute_time = not self.absolute_time
-				now = time.time()
-				if self.absolute_time:
-					self.elapsed_duration += (now - self.start_time)
-				else:
-					self.start_time = now
+			self.absolute_time = not self.absolute_time
+			now = time.time()
+			if self.absolute_time:
+				self.elapsed_duration += (now - self.start_time)
+			else:
+				self.start_time = now
 
 		elif c in "z[]{}": # timer management
 			self.start_time = time.time()
