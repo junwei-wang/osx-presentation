@@ -51,7 +51,7 @@ HELP = [
 	("w",         "toggle web view"),
 	("m",         "toggle movie view"),
 	("s",         "show slide view"),
-	("f",         "toggle fullscreen"),
+	("F5/f",      "toggle fullscreen"),
 	("⎋",         "leave fullscreen"),
 	("←/↑/⇞",     "previous page"),
 	("→/↓/⇟",     "next page"),
@@ -172,6 +172,7 @@ from AppKit import (
 	NSHomeFunctionKey, NSEndFunctionKey,
 	NSPageUpFunctionKey, NSPageDownFunctionKey,
 	NSPrevFunctionKey, NSNextFunctionKey,
+	NSF5FunctionKey,
 	NSScreen, NSWorkspace, NSImage,
 	NSBezierPath, NSRoundLineCapStyle,
 )
@@ -723,6 +724,7 @@ class PresenterView(NSView):
 		else:
 			action = {
 				"f":                     toggle_fullscreen,
+				NSF5FunctionKey:         toggle_fullscreen,
 				".":                     toggle_black_view,
 				"b":                     toggle_black_view,
 				"w":                     toggle_web_view,
