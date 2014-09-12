@@ -53,10 +53,10 @@ HELP = [
 	("s",         "show slide view"),
 	("f",         "toggle fullscreen"),
 	("⎋",         "leave fullscreen"),
-	("←/↑",       "previous page"),
-	("→/↓",       "next page"),
-	("⇞",         "back"),
-	("⇟",         "forward"),
+	("←/↑/⇞",     "previous page"),
+	("→/↓/⇟",     "next page"),
+	("⌘←",        "back"),
+	("⌘→",        "forward"),
 	("↖",         "first page"),
 	("↘",         "last page"),
 	("t/space",   "start/stop timer"),
@@ -171,6 +171,7 @@ from AppKit import (
 	NSDownArrowFunctionKey, NSRightArrowFunctionKey,
 	NSHomeFunctionKey, NSEndFunctionKey,
 	NSPageUpFunctionKey, NSPageDownFunctionKey,
+	NSPrevFunctionKey, NSNextFunctionKey,
 	NSScreen, NSWorkspace, NSImage,
 	NSBezierPath, NSRoundLineCapStyle,
 )
@@ -632,13 +633,18 @@ class PresenterView(NSView):
 	
 	
 	def keyDown_(self, event):
+		c = event.characters()
+		
 		if event.modifierFlags() & NSAlternateKeyMask:
 			c = event.charactersIgnoringModifiers()
 			if c == "i": # reset bbox to identity
 				global bbox
 				bbox = NSAffineTransform.transform()
-		
-		c = event.characters()
+		elif event.modifierFlags() & NSCommandKeyMask:
+			if c == NSLeftArrowFunctionKey:
+				c = NSPrevFunctionKey
+			elif c == NSRightArrowFunctionKey:
+				c = NSNextFunctionKey
 		
 		if c == "q": # quit
 			app.terminate_(self)
@@ -724,12 +730,14 @@ class PresenterView(NSView):
 				"s":                     presentation_show,
 				NSUpArrowFunctionKey:    prev_page,
 				NSLeftArrowFunctionKey:  prev_page,
+				NSPageUpFunctionKey:     prev_page,
 				NSDownArrowFunctionKey:  next_page,
 				NSRightArrowFunctionKey: next_page,
+				NSPageDownFunctionKey:   next_page,
 				NSHomeFunctionKey:       home_page,
 				NSEndFunctionKey:        end_page,
-				NSPageUpFunctionKey:     back,
-				NSPageDownFunctionKey:   forward,
+				NSPrevFunctionKey:       back,
+				NSNextFunctionKey:       forward,
 			}.get(c, nop)
 			action()
 		
