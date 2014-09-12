@@ -20,7 +20,7 @@ import getopt
 import textwrap
 import mimetypes
 
-from math import exp
+from math import exp, hypot
 from collections import defaultdict
 
 
@@ -47,6 +47,7 @@ HELP = [
 	("?",         "show/hide this help"),
 	("h",         "hide"),
 	("q",         "quit"),
+	("./b",       "toggle black view"),
 	("w",         "toggle web view"),
 	("m",         "toggle movie view"),
 	("s",         "show slide view"),
@@ -338,7 +339,7 @@ for page_number in range(page_count):
 
 # interaction state
 
-IDLE, BBOX, DRAW = range(3)
+IDLE, BBOX, CLIC, DRAW = range(4)
 state = IDLE
 
 drawings = defaultdict(list)
@@ -540,8 +541,8 @@ class PresenterView(NSView):
 		elif self.absolute_time:
 			clock = time.localtime(now)
 		else:
-			runing_duration = now - self.start_time + self.elapsed_duration
-			clock = time.gmtime(abs(self.duration - runing_duration))
+			running_duration = now - self.start_time + self.elapsed_duration
+			clock = time.gmtime(abs(self.duration - running_duration))
 		clock = NSString.stringWithString_(time.strftime("%H:%M:%S", clock))
 		clock.drawAtPoint_withAttributes_((margin, height-1.4*margin), {
 			NSFontAttributeName:            NSFont.labelFontOfSize_(margin),
@@ -716,6 +717,8 @@ class PresenterView(NSView):
 		else:
 			action = {
 				"f":                     toggle_fullscreen,
+				".":                     toggle_black_view,
+				"b":                     toggle_black_view,
 				"w":                     toggle_web_view,
 				"m":                     toggle_movie_view,
 				"s":                     presentation_show,
@@ -748,26 +751,33 @@ class PresenterView(NSView):
 		if event.modifierFlags() & NSAlternateKeyMask:
 			state = BBOX
 		else:
-			self.path = NSBezierPath.bezierPath()
-			self.path.setLineCapStyle_(NSRoundLineCapStyle)
-			self.path.moveToPoint_(self.transform.transformPoint_(event.locationInWindow()))
-			drawings[current_page].append(self.path)
-			state = DRAW
+			self.press_location = event.locationInWindow()
+			state = CLIC
 	
 	def mouseDragged_(self, event):
-		if state == BBOX:
-			delta = self.transform.transformSize_((event.deltaX(), -event.deltaY()))
-			bbox.translateXBy_yBy_(delta.width, delta.height)
+		global state
+		if state == CLIC:
+			location = event.locationInWindow()
+			if hypot(location.x-self.press_location.x, location.y-self.press_location.y) < 5:
+				return
+			self.path = NSBezierPath.bezierPath()
+			self.path.setLineCapStyle_(NSRoundLineCapStyle)
+			self.path.moveToPoint_(self.transform.transformPoint_(self.press_location))
+			self.path.lineToPoint_(self.transform.transformPoint_(location))
+			drawings[current_page].append(self.path)
+			state = DRAW
 		elif state == DRAW:
 			self.path.lineToPoint_(self.transform.transformPoint_(event.locationInWindow()))
+		elif state == BBOX:
+			delta = self.transform.transformSize_((event.deltaX(), -event.deltaY()))
+			bbox.translateXBy_yBy_(delta.width, delta.height)
 		refresher.refresh_()
 	
 	def mouseUp_(self, event):
 		global state
-		if state == IDLE:
+		if state == CLIC:
 			self.click_(event)
-		else:
-			state = IDLE
+		state = IDLE
 		refresher.refresh_()
 	
 	def click_(self, event):
@@ -824,6 +834,7 @@ def create_window(title, Window=NSWindow):
 	)
 	window.setTitle_(title)
 	window.makeKeyAndOrderFront_(nil)
+	window.setBackgroundColor_(NSColor.blackColor())
 	return window
 
 def create_view(window, View=NSView):
@@ -848,6 +859,11 @@ frame = presentation_view.frame()
 
 slide_view = SlideView.alloc().initWithFrame_(frame)
 add_subview(presentation_view, slide_view)
+
+# black view
+
+black_view = NSView.alloc().initWithFrame_(frame)
+add_subview(presentation_view, black_view)
 
 # web view
 
@@ -885,12 +901,13 @@ if show_feed:
 # views visibility
 
 def presentation_show(visible_view=slide_view):
-	for view in [slide_view, web_view, movie_view]:
+	for view in [slide_view, black_view, web_view, movie_view]:
 		view.setHidden_(view != visible_view)
 
 def toggle_view(view):
 	presentation_show(view if view.isHidden() else slide_view)
 
+def toggle_black_view(): toggle_view(black_view)
 def toggle_web_view():   toggle_view(web_view)
 def toggle_movie_view(): toggle_view(movie_view)
 
