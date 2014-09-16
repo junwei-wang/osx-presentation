@@ -945,8 +945,8 @@ def toggle_fullscreen(fullscreen=None):
 		fullscreen = not _fullscreen
 	
 	if fullscreen != _fullscreen:
-		for window, screen in reversed(zip([presenter_window, presentation_window],
-		                                   NSScreen.screens())):
+		for window, screen in reversed(list(zip([presenter_window, presentation_window],
+		                                        NSScreen.screens()))):
 			view = window.contentView()
 			if fullscreen:
 				view.enterFullScreenMode_withOptions_(screen, {})
