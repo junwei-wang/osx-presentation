@@ -844,7 +844,6 @@ def create_window(title, Window=NSWindow):
 	)
 	window.setTitle_(title)
 	window.makeKeyAndOrderFront_(nil)
-	window.setBackgroundColor_(NSColor.blackColor())
 	return window
 
 def create_view(window, View=NSView):
@@ -872,7 +871,12 @@ add_subview(presentation_view, slide_view)
 
 # black view
 
-black_view = NSView.alloc().initWithFrame_(frame)
+class BlackView(NSView):
+	def drawRect_(self, rect):
+		bounds = self.bounds()
+		NSRectFillUsingOperation(bounds, NSCompositeClear)
+
+black_view = BlackView.alloc().initWithFrame_(frame)
 add_subview(presentation_view, black_view)
 
 # web view
@@ -941,8 +945,8 @@ def toggle_fullscreen(fullscreen=None):
 		fullscreen = not _fullscreen
 	
 	if fullscreen != _fullscreen:
-		for window, screen in zip([presenter_window, presentation_window],
-		                          NSScreen.screens()):
+		for window, screen in reversed(zip([presenter_window, presentation_window],
+		                                   NSScreen.screens())):
 			view = window.contentView()
 			if fullscreen:
 				view.enterFullScreenMode_withOptions_(screen, {})
