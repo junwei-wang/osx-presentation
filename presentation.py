@@ -47,19 +47,19 @@ HELP = [
 	("?",         "show/hide this help"),
 	("h",         "hide"),
 	("q",         "quit"),
-	("./b",       "toggle black view"),
+	(".|b",       "toggle black view"),
 	("w",         "toggle web view"),
 	("m",         "toggle movie view"),
 	("s",         "show slide view"),
-	("F5/f",      "toggle fullscreen"),
+	("F5|f",      "toggle fullscreen"),
 	("⎋",         "leave fullscreen"),
-	("←/↑/⇞",     "previous page"),
-	("→/↓/⇟",     "next page"),
-	("⌘←",        "back"),
-	("⌘→",        "forward"),
-	("↖",         "first page"),
-	("↘",         "last page"),
-	("t/space",   "start/stop timer"),
+	("←|↑|⇞",     "previous page"),
+	("→|↓|⇟",     "next page"),
+	("⌘←/→",      "back/forward"),
+	("⌘↑/↓",      "previous/next frame"),
+	("⌘⇞/⇟",      "previous/next section"),
+	("↖/↘",       "first/last page"),
+	("t|space",   "start or stop timer"),
 	("z",         "set origin for timer"),
 	("[/]",       "sub/add  1 minute to planned time"),
 	("{/}",       "sub/add 10 minutes"),
@@ -259,7 +259,7 @@ if not pdf:
 	exit_usage("'%s' does not seem to be a pdf." % url.path(), 1)
 
 
-# page navigation
+# navigation
 
 page_count = pdf.pageCount()
 first_page, last_page = 0, page_count-1
@@ -302,10 +302,46 @@ def goto_page(page):
 		_goto(page)
 
 
-def next_page(): goto_page(current_page+1)
-def prev_page(): goto_page(current_page-1)
-def home_page(): goto_page(first_page)
-def end_page():  goto_page(last_page)
+pages = list(range(page_count)) # pages index
+
+frames = [] # frames index
+current_label = None
+for page_number in range(page_count):
+	page = pdf.pageAtIndex_(page_number)
+	label = page.label()
+	if label != current_label:
+		# a new frame just started
+		frames.append(page_number)
+		current_label = label
+
+sections = [] # sections index
+outline = pdf.outlineRoot()
+if outline:
+	for i in range(outline.numberOfChildren()):
+		section = outline.childAtIndex_(i)
+		destination = section.destination()
+		sections.append(pdf.indexForPage_(destination.page()))
+
+def _next(index):
+	for page in index:
+		if page > current_page:
+			return page
+	return current_page
+
+def _prev(index):
+	for page in reversed(index):
+		if page < current_page:
+			return page
+	return current_page
+
+def home_page():    goto_page(first_page)
+def end_page():     goto_page(last_page)
+def next_page():    goto_page(_next(pages))
+def prev_page():    goto_page(_prev(pages))
+def next_frame():   goto_page(_next(frames))
+def prev_frame():   goto_page(_prev(frames))
+def next_section(): goto_page(_next(sections))
+def prev_section(): goto_page(_prev(sections))
 
 
 # annotations
@@ -641,11 +677,6 @@ class PresenterView(NSView):
 			if c == "i": # reset bbox to identity
 				global bbox
 				bbox = NSAffineTransform.transform()
-		elif event.modifierFlags() & NSCommandKeyMask:
-			if c == NSLeftArrowFunctionKey:
-				c = NSPrevFunctionKey
-			elif c == NSRightArrowFunctionKey:
-				c = NSNextFunctionKey
 		
 		if c == "q": # quit
 			app.terminate_(self)
@@ -722,7 +753,7 @@ class PresenterView(NSView):
 			del drawings[current_page]
 		
 		else:
-			action = {
+			actions = {
 				"f":                     toggle_fullscreen,
 				NSF5FunctionKey:         toggle_fullscreen,
 				".":                     toggle_black_view,
@@ -730,17 +761,28 @@ class PresenterView(NSView):
 				"w":                     toggle_web_view,
 				"m":                     toggle_movie_view,
 				"s":                     presentation_show,
-				NSUpArrowFunctionKey:    prev_page,
 				NSLeftArrowFunctionKey:  prev_page,
+				NSUpArrowFunctionKey:    prev_page,
 				NSPageUpFunctionKey:     prev_page,
-				NSDownArrowFunctionKey:  next_page,
+				NSPrevFunctionKey:       prev_page,
 				NSRightArrowFunctionKey: next_page,
+				NSDownArrowFunctionKey:  next_page,
 				NSPageDownFunctionKey:   next_page,
+				NSNextFunctionKey:       next_page,
 				NSHomeFunctionKey:       home_page,
 				NSEndFunctionKey:        end_page,
-				NSPrevFunctionKey:       back,
-				NSNextFunctionKey:       forward,
-			}.get(c, nop)
+			}
+			if event.modifierFlags() & NSCommandKeyMask:
+				actions.update({
+					NSLeftArrowFunctionKey:  back,
+					NSRightArrowFunctionKey: forward,
+					NSUpArrowFunctionKey:    prev_frame,
+					NSDownArrowFunctionKey:  next_frame,
+					NSPageUpFunctionKey:     prev_section,
+					NSPageDownFunctionKey:   next_section,
+				})
+
+			action = actions.get(c, nop)
 			action()
 		
 		refresher.refresh_()
