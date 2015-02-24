@@ -548,9 +548,11 @@ class PresenterView(NSView):
 		transform.concat()
 		
 		NSGraphicsContext.saveGraphicsState()
-		
 		draw_page(self.page)
+		
 		if state == DRAW:
+			NSGraphicsContext.restoreGraphicsState()
+			NSGraphicsContext.restoreGraphicsState()
 			return
 		
 		# links
