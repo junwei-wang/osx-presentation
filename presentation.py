@@ -364,10 +364,10 @@ notes  = defaultdict(list)
 movies = {}
 for page_number in range(page_count):
 	page = pdf.pageAtIndex_(page_number)
-	page.setDisplaysAnnotations_(False)
 	for annotation in page.annotations():
 		annotation_type = type(annotation)
 		if annotation_type == PDFAnnotationText:
+			annotation.setShouldDisplay_(False)
 			notes[page_number].append(annotation.contents())
 		elif annotation_type == PDFAnnotationLink:
 			movie = get_movie(annotation.URL())
