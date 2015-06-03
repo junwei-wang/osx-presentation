@@ -39,7 +39,7 @@ $(app): $(script) $(icon)
 			<key>LSHandlerRank</key><string>Alternate</string> \
 		</dict></array> \
 		<key>CFBundleShortVersionString</key><string>$(VERSION).0</string> \
-		<key>NSHumanReadableCopyright</key><string>Copyright © 2011-2013 Renaud Blanch</string> \
+		<key>NSHumanReadableCopyright</key><string>Copyright © 2011-2015 Renaud Blanch</string> \
 		<key>CFBundleIconFile</key><string>presentation</string> \
 	</dict> \
 	</plist>" > $@/Contents/Info.plist
