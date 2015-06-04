@@ -145,6 +145,7 @@ from Foundation import (
 	NSObject, NSTimer, NSError, NSString, NSData,
 	NSAttributedString, NSUnicodeStringEncoding,
 	NSURL, NSURLRequest, NSURLConnection,
+	NSURLRequestReloadIgnoringLocalCacheData,
 	NSAffineTransform,
 	NSUserDefaults,
 )
@@ -1073,8 +1074,10 @@ else:
 def get_version():
 	try:
 		data, response, _ = NSURLConnection.sendSynchronousRequest_returningResponse_error_(
-			NSURLRequest.requestWithURL_(
-				NSURL.URLWithString_(HOME + "releases/version.txt?v=%s"%VERSION)
+			NSURLRequest.requestWithURL_cachePolicy_timeoutInterval_(
+				NSURL.URLWithString_(HOME + "releases/version.txt?v=%s"%VERSION),
+				NSURLRequestReloadIgnoringLocalCacheData,
+				2
 			), None, None
 		)
 		assert response.statusCode() == 200 # found
