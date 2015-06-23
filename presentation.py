@@ -53,6 +53,7 @@ HELP = [
 	("s",         "show slide view"),
 	("F5|f",      "toggle fullscreen"),
 	("⎋",         "leave fullscreen"),
+	("x",         "switch screens"),
 	("←|↑|⇞",     "previous page"),
 	("→|↓|⇟",     "next page"),
 	("⌘←/→",      "back/forward"),
@@ -632,7 +633,7 @@ class PresenterView(NSView):
 		
 		NSGraphicsContext.saveGraphicsState()
 		transform = NSAffineTransform.transform()
-		transform.translateXBy_yBy_(2*margin+current_width, height-2.*margin)
+		transform.translateXBy_yBy_(2*margin+current_width, height-1.5*margin)
 		transform.scaleXBy_yBy_(r, r)
 		transform.translateXBy_yBy_(0., -h)
 		transform.concat()
@@ -687,6 +688,12 @@ class PresenterView(NSView):
 		
 		elif c == chr(27): # esc
 			toggle_fullscreen(fullscreen=False)
+		
+		elif c == 'x':
+			global _switched_screens
+			_switched_screens = not _switched_screens
+			toggle_fullscreen()
+			toggle_fullscreen()
 		
 		elif c == "h":
 			app.hide_(app)
@@ -985,14 +992,19 @@ presenter_window.makeFirstResponder_(presenter_view)
 
 # handling full screens ######################################################
 
+_switched_screens = False
+
 def toggle_fullscreen(fullscreen=None):
 	_fullscreen = presenter_view.isInFullScreenMode()
 	if fullscreen is None:
 		fullscreen = not _fullscreen
 	
 	if fullscreen != _fullscreen:
+		screens = NSScreen.screens()
+		if _switched_screens:
+			screens = reversed(screens)
 		for window, screen in reversed(list(zip([presenter_window, presentation_window],
-		                                        NSScreen.screens()))):
+		                                        screens))):
 			view = window.contentView()
 			if fullscreen:
 				view.enterFullScreenMode_withOptions_(screen, {})
