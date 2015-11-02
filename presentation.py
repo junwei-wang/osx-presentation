@@ -363,7 +363,6 @@ def get_movie(url):
 		return
 	return movie
 
-notes_scale = 1.
 notes  = defaultdict(list)
 movies = {}
 for page_number in range(page_count):
@@ -527,6 +526,7 @@ class PresenterView(NSView):
 	duration_change_time = 0
 	show_help = True
 	annotation_state = None
+	notes_scale = 1.
 	
 	def drawRect_(self, rect):
 		bounds = self.bounds()
@@ -608,7 +608,7 @@ class PresenterView(NSView):
 		# notes
 		note = NSString.stringWithString_("\n".join(notes[current_page]))
 		note.drawAtPoint_withAttributes_((margin, font_size), {
-			NSFontAttributeName:            NSFont.labelFontOfSize_(font_size*notes_scale),
+			NSFontAttributeName:            NSFont.labelFontOfSize_(font_size*self.notes_scale),
 			NSForegroundColorAttributeName: NSColor.whiteColor(),
 		})
 		
@@ -751,13 +751,12 @@ class PresenterView(NSView):
 			if c == "_": c = "-"
 
 			if web_view.isHidden(): # scaling notes
-				global notes_scale
 				if c == "+":
-					notes_scale *= 1.1
+					self.notes_scale *= 1.1
 				elif c == "-":
-					notes_scale /= 1.1
+					self.notes_scale /= 1.1
 				else:
-					notes_scale = 1.
+					self.notes_scale = 1.
 			else:                   # scaling web view
 				document = web_view.mainFrame().frameView().documentView()
 				clip = document.superview()
