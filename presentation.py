@@ -64,7 +64,7 @@ HELP = [
 	("z",         "set origin for timer"),
 	("[/]",       "sub/add  1 minute to planned time"),
 	("{/}",       "sub/add 10 minutes"),
-	("+/-/0",     "zoom in/out/reset scale of notes or web view"),
+	("+/-/0",     "zoom in/out/reset speaker notes or web view"),
 	("space",     "play/pause video (while in movie mode)"),
 	("&lt;/&gt;", "step video backward/forward"),
 	("e",         "erase on-screen annotations"),
@@ -746,7 +746,7 @@ class PresenterView(NSView):
 			self.duration = max(0, self.duration)
 			self.duration_change_time = time.time()
 		
-		elif c in "+=-_0": # web view scale
+		elif c in "+=-_0": # notes or web view scale
 			if c == "=": c = "+"
 			if c == "_": c = "-"
 
