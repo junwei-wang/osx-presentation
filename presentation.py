@@ -363,6 +363,7 @@ def get_movie(url):
 		return
 	return movie
 
+notes_scale = 1.
 notes  = defaultdict(list)
 movies = {}
 for page_number in range(page_count):
@@ -607,7 +608,7 @@ class PresenterView(NSView):
 		# notes
 		note = NSString.stringWithString_("\n".join(notes[current_page]))
 		note.drawAtPoint_withAttributes_((margin, font_size), {
-			NSFontAttributeName:            NSFont.labelFontOfSize_(font_size/2.),
+			NSFontAttributeName:            NSFont.labelFontOfSize_(font_size*notes_scale),
 			NSForegroundColorAttributeName: NSColor.whiteColor(),
 		})
 		
@@ -748,17 +749,26 @@ class PresenterView(NSView):
 		elif c in "+=-_0": # web view scale
 			if c == "=": c = "+"
 			if c == "_": c = "-"
-			
-			document = web_view.mainFrame().frameView().documentView()
-			clip = document.superview()
-			if c == "+":
-				scale = (1.1, 1.1)
-			elif c == "-":
-				scale = (1./1.1, 1./1.1)
-			else:
-				scale = clip.convertSize_fromView_((1., 1.), None)
-			clip.scaleUnitSquareToSize_(scale)
-			document.setNeedsLayout_(True)
+
+			if web_view.isHidden(): # scaling notes
+				global notes_scale
+				if c == "+":
+					notes_scale *= 1.1
+				elif c == "-":
+					notes_scale /= 1.1
+				else:
+					notes_scale = 1.
+			else:                   # scaling web view
+				document = web_view.mainFrame().frameView().documentView()
+				clip = document.superview()
+				if c == "+":
+					scale = (1.1, 1.1)
+				elif c == "-":
+					scale = (1./1.1, 1./1.1)
+				else:
+					scale = clip.convertSize_fromView_((1., 1.), None)
+				clip.scaleUnitSquareToSize_(scale)
+				document.setNeedsLayout_(True)
 		
 		elif c == 'e': # erase annotation
 			del drawings[current_page]
