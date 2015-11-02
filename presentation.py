@@ -63,7 +63,7 @@ HELP = [
 	("z",         "set origin for timer"),
 	("[/]",       "sub/add  1 minute to planned time"),
 	("{/}",       "sub/add 10 minutes"),
-	("+/-/0",     "zoom in/out/reset web view"),
+	("+/-/0",     "zoom in/out/reset on speaker notes or web view"),
 	("space",     "play/pause video (while in movie mode)"),
 	("&lt;/&gt;", "step video backward/forward"),
 	("e",         "erase on-screen annotations"),
@@ -525,6 +525,7 @@ class PresenterView(NSView):
 	duration_change_time = 0
 	show_help = True
 	annotation_state = None
+	font_scale = 1.
 	
 	def drawRect_(self, rect):
 		bounds = self.bounds()
@@ -533,6 +534,7 @@ class PresenterView(NSView):
 		margin = width / 20.
 		current_width = (width-3*margin)*2/3.
 		font_size = margin/2.
+		notes_font_size = font_size*self.font_scale
 		
 		NSRectFillUsingOperation(bounds, NSCompositeClear)
 		
@@ -605,8 +607,8 @@ class PresenterView(NSView):
 		
 		# notes
 		note = NSString.stringWithString_("\n".join(notes[current_page]))
-		note.drawAtPoint_withAttributes_((margin, font_size), {
-			NSFontAttributeName:            NSFont.labelFontOfSize_(font_size/2.),
+		note.drawAtPoint_withAttributes_((margin, notes_font_size), {
+			NSFontAttributeName:            NSFont.labelFontOfSize_(notes_font_size/2.),
 			NSForegroundColorAttributeName: NSColor.whiteColor(),
 		})
 		
@@ -741,17 +743,25 @@ class PresenterView(NSView):
 		elif c in "+=-_0": # web view scale
 			if c == "=": c = "+"
 			if c == "_": c = "-"
-			
-			document = web_view.mainFrame().frameView().documentView()
-			clip = document.superview()
-			if c == "+":
-				scale = (1.1, 1.1)
-			elif c == "-":
-				scale = (1./1.1, 1./1.1)
+
+			if web_view.isHidden(): # or change notes font size
+				if c == "+":
+					self.font_scale += .1
+				elif c == "-":
+					self.font_scale -= .1
+				else:
+					self.font_scale = 1.
 			else:
-				scale = clip.convertSize_fromView_((1., 1.), None)
-			clip.scaleUnitSquareToSize_(scale)
-			document.setNeedsLayout_(True)
+				document = web_view.mainFrame().frameView().documentView()
+				clip = document.superview()
+				if c == "+":
+					scale = (1.1, 1.1)
+				elif c == "-":
+					scale = (1./1.1, 1./1.1)
+				else:
+					scale = clip.convertSize_fromView_((1., 1.), None)
+				clip.scaleUnitSquareToSize_(scale)
+				document.setNeedsLayout_(True)
 		
 		elif c == 'e': # erase annotation
 			del drawings[current_page]
