@@ -224,8 +224,7 @@ if launched_from_finder:
 	# HACK: run application to get dropped filename if any and then stop it
 	class DropApplicationDelegate(NSObject):
 		def application_openFile_(self, app, filename):
-			filename = filename.encode("utf-8")
-			if filename != os.path.abspath(__file__):
+			if filename != os.path.abspath(__file__).decode(sys.getfilesystemencoding()):
 				args.append(filename)
 		def applicationDidFinishLaunching_(self, notification):
 			app.stop_(self)
