@@ -64,7 +64,7 @@ HELP = [
 	("z",         "set origin for timer"),
 	("[/]",       "sub/add  1 minute to planned time"),
 	("{/}",       "sub/add 10 minutes"),
-	("+/-/0",     "zoom in/out/reset web view"),
+	("+/-/0",     "zoom in/out/reset scale of notes or web view"),
 	("space",     "play/pause video (while in movie mode)"),
 	("&lt;/&gt;", "step video backward/forward"),
 	("e",         "erase on-screen annotations"),
