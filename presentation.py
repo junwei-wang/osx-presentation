@@ -526,6 +526,7 @@ class PresenterView(NSView):
 	show_help = True
 	annotation_state = None
 	notes_scale = 1.
+	target_page = ""
 	
 	def drawRect_(self, rect):
 		bounds = self.bounds()
@@ -594,8 +595,12 @@ class PresenterView(NSView):
 		app.dockTile().setBadgeLabel_(clock)
 	
 		# page number
-		page_number = NSString.stringWithString_("%s (%s/%s)" % (
-			self.page.label(), current_page+1, page_count))
+		if self.target_page:
+			page_number = NSString.stringWithString_("goto %s/%s" % (
+				self.target_page, page_count))
+		else:
+			page_number = NSString.stringWithString_("(%s) %s/%s" % (
+				self.page.label(), current_page+1, page_count))
 		attr = {
 			NSFontAttributeName:            NSFont.labelFontOfSize_(font_size),
 			NSForegroundColorAttributeName: NSColor.whiteColor(),
@@ -675,6 +680,11 @@ class PresenterView(NSView):
 	
 	
 	def keyDown_(self, event):
+		def send(c): # resend event with modified character
+			app.sendEvent_(NSEvent.keyEventWithType_location_modifierFlags_timestamp_windowNumber_context_characters_charactersIgnoringModifiers_isARepeat_keyCode_(
+				event.type(), event.locationInWindow(), event.modifierFlags(), event.timestamp(), event.windowNumber(), event.context(),
+				c, c, event.isARepeat(), ord(c)))
+		
 		c = event.characters()
 		
 		if event.modifierFlags() & NSAlternateKeyMask:
@@ -685,6 +695,19 @@ class PresenterView(NSView):
 		
 		if c == "q": # quit
 			app.terminate_(self)
+		
+		elif c in "0123456789" + chr(13) + chr(127):
+			if c == '0' and not self.target_page: # skip trailing 0
+				send(')')                          # and rather change zoom
+				return
+			if c == chr(13):
+				if self.target_page:
+					goto_page(int(self.target_page)-1)
+				self.target_page = ''
+			elif c == chr(127):
+				self.target_page = self.target_page[:-1]
+			else:
+				self.target_page += c
 		
 		elif c == chr(27): # esc
 			toggle_fullscreen(fullscreen=False)
@@ -703,9 +726,7 @@ class PresenterView(NSView):
 		
 		elif c == " ": # play/pause video
 			if movie_view.isHidden(): # or toggle timer
-				app.sendEvent_(NSEvent.keyEventWithType_location_modifierFlags_timestamp_windowNumber_context_characters_charactersIgnoringModifiers_isARepeat_keyCode_(
-					event.type(), event.locationInWindow(), event.modifierFlags(), event.timestamp(), event.windowNumber(), event.context(),
-					"t", "t", event.isARepeat(), ord("t")))
+				send('t')
 				return
 			
 			playing = movie_view.movie().rate() > 0.
@@ -745,7 +766,7 @@ class PresenterView(NSView):
 			self.duration = max(0, self.duration)
 			self.duration_change_time = time.time()
 		
-		elif c in "+=-_0": # notes or web view scale
+		elif c in "+=-_0)": # notes or web view scale
 			if c == "=": c = "+"
 			if c == "_": c = "-"
 
