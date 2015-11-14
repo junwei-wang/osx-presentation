@@ -5,7 +5,7 @@
 """
 A PDF presentation tool for Mac OS X
 
-Copyright (c) 2011--2014, IIHM/LIG - Renaud Blanch <http://iihm.imag.fr/blanch/>
+Copyright (c) 2011--2015, IIHM/LIG - Renaud Blanch <http://iihm.imag.fr/blanch/>
 Licence: GPLv3 or higher <http://www.gnu.org/licenses/gpl.html>
 """
 
@@ -27,7 +27,7 @@ from collections import defaultdict
 # constants and helpers ######################################################
 
 NAME = "Présentation"
-MAJOR, MINOR = 1, 3
+MAJOR, MINOR = 1, 4
 VERSION = "%s.%s" % (MAJOR, MINOR)
 HOME = "http://iihm.imag.fr/blanch/software/osx-presentation/"
 COPYRIGHT = "Copyright © 2011-2015 Renaud Blanch"
