@@ -47,6 +47,7 @@ HELP = [
 	("?",         "show/hide this help"),
 	("h",         "hide"),
 	("q",         "quit"),
+	("r",         "relaunch"),
 	(".|b",       "toggle black view"),
 	("w",         "toggle web view"),
 	("m",         "toggle movie view"),
@@ -693,6 +694,10 @@ class PresenterView(NSView):
 				bbox = NSAffineTransform.transform()
 		
 		if c == "q": # quit
+			app.terminate_(self)
+		
+		elif c == 'r': # relaunch
+			NSWorkspace.sharedWorkspace().openFile_withApplication_(url.path(), _s(NAME).decomposedStringWithCanonicalMapping())
 			app.terminate_(self)
 		
 		elif c in "0123456789" + chr(13) + chr(127):
