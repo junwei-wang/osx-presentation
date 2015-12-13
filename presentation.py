@@ -51,8 +51,7 @@ HELP = [
 	("w",         "toggle web view"),
 	("m",         "toggle movie view"),
 	("s",         "show slide view"),
-	("F5|f",      "toggle fullscreen"),
-	("⎋",         "leave fullscreen"),
+	("f/F5/⎋",    "toggle/enter/leave fullscreen"),
 	("x",         "switch screens"),
 	("←|↑|⇞",     "previous page"),
 	("→|↓|⇟",     "next page"),
@@ -712,6 +711,9 @@ class PresenterView(NSView):
 		elif c == chr(27): # esc
 			toggle_fullscreen(fullscreen=False)
 		
+		elif c == NSF5FunctionKey:
+			toggle_fullscreen(fullscreen=True)
+		
 		elif c == 'x':
 			global _switched_screens
 			_switched_screens = not _switched_screens
@@ -795,7 +797,6 @@ class PresenterView(NSView):
 		else:
 			actions = {
 				"f":                     toggle_fullscreen,
-				NSF5FunctionKey:         toggle_fullscreen,
 				".":                     toggle_black_view,
 				"b":                     toggle_black_view,
 				"w":                     toggle_web_view,
