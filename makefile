@@ -12,7 +12,6 @@ iconset := presentation.iconset
 app     := Présentation.app
 dist    := osx-presentation-$(VERSION).dmg
 src     := osx-presentation-$(VERSION).tbz
-readme  := README.rst
 
 
 # rules ######################################################################
@@ -64,8 +63,9 @@ archive:
 
 dmg: $(app) $(dist)
 
-$(dist): $(app) $(readme)
+$(dist): $(app)
 	mkdir $(DMG_PATH)
+	ln -s /Applications $(DMG_PATH)/
 	cp -r $^ $(DMG_PATH)
 	hdiutil create -ov -srcfolder $(DMG_PATH) -volname $(basename $@) $@
 	hdiutil internet-enable -yes $@
