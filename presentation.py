@@ -152,7 +152,7 @@ from Foundation import (
 )
 
 from AppKit import (
-	NSApplication, NSEvent,
+	NSApplication, NSBundle, NSEvent,
 	NSApplicationDidFinishLaunchingNotification,
 	NSOpenPanel, NSFileHandlingPanelOKButton,
 	NSAlert, NSAlertDefaultReturn, NSAlertAlternateReturn,
@@ -217,6 +217,11 @@ ICON = NSImage.alloc().initWithData_(NSData.alloc().initWithBase64Encoding_(ICON
 
 app = NSApplication.sharedApplication()
 app.activateIgnoringOtherApps_(True)
+
+bundle = NSBundle.mainBundle()
+info = bundle.localizedInfoDictionary() or bundle.infoDictionary()
+info['CFBundleName'] = _s(NAME)
+
 
 restarted = False # has the application been restarted before actual launch
 
@@ -1067,7 +1072,6 @@ def setup_menu(delegate):
 	
 	application_menuitem = main_menu.addItemWithTitle_action_keyEquivalent_("Application", None, " ")
 	application_menu = NSMenu.alloc().initWithTitle_("Application")
-#	app.setAppleMenu_(application_menu)
 	
 	add_item(application_menu, ["About", NAME], "about:", target=delegate)
 	add_item(application_menu, ["Check for updates…"], "update:", target=delegate)
