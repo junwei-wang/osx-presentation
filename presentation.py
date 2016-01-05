@@ -221,6 +221,7 @@ app.activateIgnoringOtherApps_(True)
 bundle = NSBundle.mainBundle()
 info = bundle.localizedInfoDictionary() or bundle.infoDictionary()
 info['CFBundleName'] = _s(NAME)
+info['NSAppTransportSecurity'] = {'NSAllowsArbitraryLoads': YES}
 
 
 restarted = False # has the application been restarted before actual launch
