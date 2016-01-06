@@ -161,7 +161,7 @@ from AppKit import (
 	NSWindow,
 	NSMiniaturizableWindowMask, NSResizableWindowMask, NSTitledWindowMask,
 	NSBackingStoreBuffered,
-	NSCommandKeyMask, NSAlternateKeyMask,
+	NSCommandKeyMask, NSAlternateKeyMask, NSControlKeyMask,
 	NSMenu, NSMenuItem,
 	NSGraphicsContext,
 	NSCompositeClear, NSCompositeSourceAtop, NSCompositeCopy,
@@ -698,6 +698,11 @@ class PresenterView(NSView):
 			if c == "i": # reset bbox to identity
 				global bbox
 				bbox = NSAffineTransform.transform()
+		
+		if event.modifierFlags() & (NSControlKeyMask | NSCommandKeyMask):
+			c = event.charactersIgnoringModifiers()
+			if c not in 'f': # only handle cmd+ctrl+f as f for now
+				return
 		
 		if c == "q": # quit
 			app.terminate_(self)
