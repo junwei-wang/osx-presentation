@@ -881,7 +881,7 @@ class PresenterView(NSView):
 	def mouseMoved_(self, event):
 		global cursor_location
 		cursor_location = self.transform.transformPoint_(event.locationInWindow())
-		refresher.refresh_()
+		slide_view.setNeedsDisplay_(True)
 	
 	def mouseDragged_(self, event):
 		global state, cursor_location
