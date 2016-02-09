@@ -537,6 +537,9 @@ class MessageView(NSView):
 
 # presenter view #############################################################
 
+def hasModifiers(event, mask):
+	return (event.modifierFlags() & mask) == mask
+
 class PresenterView(NSView):
 	transform = NSAffineTransform.transform()
 	duration = presentation_duration * 60.
@@ -708,13 +711,13 @@ class PresenterView(NSView):
 		
 		c = event.characters()
 		
-		if event.modifierFlags() & NSAlternateKeyMask:
+		if hasModifiers(event, NSAlternateKeyMask):
 			c = event.charactersIgnoringModifiers()
 			if c == "i": # reset bbox to identity
 				global bbox
 				bbox = NSAffineTransform.transform()
 		
-		if event.modifierFlags() & (NSControlKeyMask | NSCommandKeyMask):
+		if hasModifiers(event, NSControlKeyMask | NSCommandKeyMask):
 			c = event.charactersIgnoringModifiers()
 			if c not in 'f': # only handle cmd+ctrl+f as f for now
 				return
@@ -728,7 +731,7 @@ class PresenterView(NSView):
 		
 		elif c in "0123456789" + chr(13) + chr(127):
 			if c == '0' and not self.target_page: # skip trailing 0
-				send(')')                          # and rather change zoom
+				send(')')                         # and rather change zoom
 				return
 			if c == chr(13):
 				if self.target_page:
@@ -844,7 +847,7 @@ class PresenterView(NSView):
 				NSHomeFunctionKey:       home_page,
 				NSEndFunctionKey:        end_page,
 			}
-			if event.modifierFlags() & NSCommandKeyMask:
+			if hasModifiers(event, NSCommandKeyMask):
 				actions.update({
 					NSLeftArrowFunctionKey:  back,
 					NSRightArrowFunctionKey: forward,
@@ -860,7 +863,7 @@ class PresenterView(NSView):
 		refresher.refresh_()
 	
 	def scrollWheel_(self, event):
-		if not (event.modifierFlags() & NSAlternateKeyMask):
+		if not hasModifiers(event, NSAlternateKeyMask):
 			return
 		p = event.locationInWindow()
 		p = self.transform.transformPoint_(p)
@@ -872,10 +875,10 @@ class PresenterView(NSView):
 	def mouseDown_(self, event):
 		global state
 		assert state == IDLE
-		if event.modifierFlags() & NSAlternateKeyMask:
+		if hasModifiers(event, NSAlternateKeyMask):
 			state = BBOX
 		else:
-			self.press_location = event.locationInWindow()
+			self.press_location = self.transform.transformPoint_(event.locationInWindow())
 			state = CLIC
 	
 	def mouseMoved_(self, event):
@@ -888,12 +891,11 @@ class PresenterView(NSView):
 		location = event.locationInWindow()
 		cursor_location = self.transform.transformPoint_(location)
 		if state == CLIC:
-			location = event.locationInWindow()
-			if hypot(location.x-self.press_location.x, location.y-self.press_location.y) < 5:
+			if hypot(cursor_location.x-self.press_location.x, cursor_location.y-self.press_location.y) < 5:
 				return
 			self.path = NSBezierPath.bezierPath()
 			self.path.setLineCapStyle_(NSRoundLineCapStyle)
-			self.path.moveToPoint_(self.transform.transformPoint_(self.press_location))
+			self.path.moveToPoint_(self.press_location)
 			self.path.lineToPoint_(cursor_location)
 			drawings[current_page].append(self.path)
 			state = DRAW
@@ -912,8 +914,7 @@ class PresenterView(NSView):
 		refresher.refresh_()
 	
 	def click_(self, event):
-		point = self.transform.transformPoint_(event.locationInWindow())
-		annotation = self.page.annotationAtPoint_(point)
+		annotation = self.page.annotationAtPoint_(self.press_location)
 		if annotation is None:
 			return
 		
