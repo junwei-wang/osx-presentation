@@ -888,8 +888,7 @@ class PresenterView(NSView):
 	
 	def mouseDragged_(self, event):
 		global state, cursor_location
-		location = event.locationInWindow()
-		cursor_location = self.transform.transformPoint_(location)
+		cursor_location = self.transform.transformPoint_(event.locationInWindow())
 		if state == CLIC:
 			if hypot(cursor_location.x-self.press_location.x, cursor_location.y-self.press_location.y) < 5:
 				return
