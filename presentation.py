@@ -449,6 +449,9 @@ def draw_page(page):
 # presentation ###############################################################
 
 class SlideView(NSView):
+	show_cursor = False
+	hide_timer = None
+	
 	def drawRect_(self, rect):
 		bounds = self.bounds()
 		width, height = bounds.size
@@ -469,17 +472,32 @@ class SlideView(NSView):
 		transform.concat()
 		draw_page(page)
 		
-		cursor_bounds = NSRect()
-		W, H = CURSOR.size()
-		iw, ih = transform.transformSize_((1., 1.))
-		cursor_bounds.size = (W/iw, H/ih)
-		x, y = cursor_location
-		cursor_bounds.origin = x-X_hot/iw, y-Y_hot/ih
-		CURSOR.drawInRect_fromRect_operation_fraction_(
-			cursor_bounds, NSZeroRect, NSCompositeSourceAtop, 1.
-		)
+		if self.show_cursor:
+			cursor_bounds = NSRect()
+			W, H = CURSOR.size()
+			iw, ih = transform.transformSize_((1., 1.))
+			cursor_bounds.size = (W/iw, H/ih)
+			x, y = cursor_location
+			cursor_bounds.origin = x-X_hot/iw, y-Y_hot/ih
+			CURSOR.drawInRect_fromRect_operation_fraction_(
+				cursor_bounds, NSZeroRect, NSCompositeSourceAtop, 1.
+			)
 		
 		NSGraphicsContext.restoreGraphicsState()
+	
+	def showCursor(self):
+		self.show_cursor = True
+		self.setNeedsDisplay_(True)
+		if self.hide_timer:
+			self.hide_timer.invalidate()
+		self.hide_timer = NSTimer.scheduledTimerWithTimeInterval_target_selector_userInfo_repeats_(
+			5.,
+			self, "hideCursor:",
+			nil, NO)
+	
+	def hideCursor_(self, timer):
+		self.show_cursor = False
+		self.setNeedsDisplay_(True)
 
 
 class MessageView(NSView):
@@ -884,7 +902,7 @@ class PresenterView(NSView):
 	def mouseMoved_(self, event):
 		global cursor_location
 		cursor_location = self.transform.transformPoint_(event.locationInWindow())
-		slide_view.setNeedsDisplay_(True)
+		slide_view.showCursor()
 	
 	def mouseDragged_(self, event):
 		global state, cursor_location
@@ -903,7 +921,8 @@ class PresenterView(NSView):
 		elif state == BBOX:
 			delta = self.transform.transformSize_((event.deltaX(), -event.deltaY()))
 			bbox.translateXBy_yBy_(delta.width, delta.height)
-		refresher.refresh_()
+		slide_view.showCursor()
+		self.setNeedsDisplay_(True)
 	
 	def mouseUp_(self, event):
 		global state
