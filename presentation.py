@@ -30,7 +30,7 @@ NAME = "Présentation"
 MAJOR, MINOR = 1, 6
 VERSION = "%s.%s" % (MAJOR, MINOR)
 HOME = "http://iihm.imag.fr/blanch/software/osx-presentation/"
-COPYRIGHT = "Copyright © 2011-2015 Renaud Blanch"
+COPYRIGHT = "Copyright © 2011-2016 Renaud Blanch"
 CREDITS = """
 Home: <a href='%s'>osx-presentation</a> <br/>
 Source: <a href='https://bitbucket.org/rndblnch/osx-presentation/src/tip/presentation.py'>presentation.py</a> <br/>
@@ -87,10 +87,11 @@ if launched_from_finder:
 
 def exit_usage(message=None, code=0):
 	usage = textwrap.dedent("""\
-	Usage: %s [-hvid:f] <doc.pdf>
+	Usage: %s [-hvip:d:f] <doc.pdf>
 		-h --help          print this help message then exit
 		-v --version       print version then exit
 		-i --icon          print icon then exit
+		-p --page <p>      start on page int(p)
 		-d --duration <t>  duration of the talk in minutes
 		-f --feed          enable reading feed on stdin
 		<doc.pdf>          file to present
@@ -113,13 +114,15 @@ def exit_icon():
 # options
 
 try:
-	options, args = getopt.getopt(args, "hvid:f", ["help", "version", "icon",
-	                                               "duration=", "feed"])
+	options, args = getopt.getopt(args, "hvip:d:f", ["help", "version", "icon",
+	                                                 "page=", "duration=",
+	                                                 "feed"])
 except getopt.GetoptError as message:
 	exit_usage(message, 1)
 
-show_feed = False
+start_page = 0
 presentation_duration = 0
+show_feed = False
 
 for opt, value in options:
 	if opt in ["-h", "--help"]:
@@ -128,6 +131,8 @@ for opt, value in options:
 		exit_version()
 	elif opt in ["-i", "--icon"]:
 		exit_icon()
+	elif opt in ['-p', '--page']:
+		start_page = int(value)
 	elif opt in ["-d", "--duration"]:
 		presentation_duration = int(value)
 	elif opt in ["-f", "--feed"]:
@@ -244,7 +249,7 @@ if launched_from_finder:
 
 
 if args:
-	url = NSURL.fileURLWithPath_(args[0])
+	url = NSURL.fileURLWithPath_(_s(args[0]))
 else:
 	class Opener(NSObject):
 		def getURL(self):
@@ -276,7 +281,7 @@ page_count = pdf.pageCount()
 first_page, last_page = 0, page_count-1
 
 past_pages = []
-current_page = first_page
+current_page = max(first_page, min(start_page, last_page))
 future_pages = []
 
 def _goto(page):
@@ -744,8 +749,7 @@ class PresenterView(NSView):
 			app.terminate_(self)
 		
 		elif c == 'r': # relaunch
-			NSWorkspace.sharedWorkspace().openFile_withApplication_(url.path(), _s(NAME).decomposedStringWithCanonicalMapping())
-			app.terminate_(self)
+			os.execv(__file__, [__file__, '--page', str(current_page), url.path()])
 		
 		elif c in "0123456789" + chr(13) + chr(127):
 			if c == '0' and not self.target_page: # skip trailing 0
