@@ -23,6 +23,9 @@ Its most notable features are:
 
 Changes since 1.0
 
+1.7:
+  - reloading now keeps the current page
+
 1.6:
   - added mirror cursor on presentation view
   - fixed 1.5 regression on shortcuts using cmd key
