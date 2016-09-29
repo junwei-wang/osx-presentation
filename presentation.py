@@ -675,9 +675,9 @@ class PresenterView(NSView):
 			help_text.drawAtPoint_((2*margin+current_width, 0))
 		
 		# next page
-		try:
+		if current_page < last_page:
 			page = pdf.pageAtIndex_(current_page+1)
-		except:
+		else:
 			return
 		page_rect = page.boundsForBox_(kPDFDisplayBoxCropBox)
 		_, (w, h) = page_rect
