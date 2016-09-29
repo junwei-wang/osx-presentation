@@ -376,11 +376,14 @@ def get_movie(url):
 		return
 	return movie
 
+def annotations(page):
+	return page.annotations() or []
+
 notes  = defaultdict(list)
 movies = {}
 for page_number in range(page_count):
 	page = pdf.pageAtIndex_(page_number)
-	for annotation in page.annotations():
+	for annotation in annotations(page):
 		annotation_type = type(annotation)
 		if annotation_type == PDFAnnotationText:
 			annotation.setShouldDisplay_(False)
@@ -411,7 +414,7 @@ def draw_page(page):
 	page.drawWithBox_(kPDFDisplayBoxCropBox)
 	
 	NSColor.blackColor().setFill()
-	for annotation in page.annotations():
+	for annotation in annotations(page):
 		if not annotation in movies:
 			continue
 		bounds = annotation.bounds()
@@ -608,7 +611,7 @@ class PresenterView(NSView):
 		
 		# links
 		NSColor.blueColor().setFill()
-		for annotation in self.page.annotations():
+		for annotation in annotations(self.page):
 			if type(annotation) == PDFAnnotationLink:
 				NSFrameRectWithWidth(annotation.bounds(), .5)
 		
@@ -709,7 +712,7 @@ class PresenterView(NSView):
 		self.discardCursorRects()
 		self.removeAllToolTips()
 		
-		for i, annotation in enumerate(self.page.annotations()):
+		for i, annotation in enumerate(annotations(self.page)):
 			if type(annotation) != PDFAnnotationLink:
 				continue
 			
@@ -722,7 +725,7 @@ class PresenterView(NSView):
 	
 	
 	def view_stringForToolTip_point_userData_(self, view, tag, point, data):
-		annotation = self.page.annotations()[data]
+		annotation = annotations(self.page)[data]
 		return annotation.toolTip() or ""
 	
 	
