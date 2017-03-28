@@ -48,6 +48,7 @@ X_hot, Y_hot = 4, 18
 
 PRESENTER_FRAME   = ((100., 100.), (1024., 768.))
 MIN_POSTER_HEIGHT = 20.
+CR, ESC, DEL = (chr(k) for k in [13, 27, 127])
 
 HELP = [
 	("?",         "show/hide this help"),
@@ -751,26 +752,26 @@ class PresenterView(NSView):
 			if c not in 'f': # only handle cmd+ctrl+f as f for now
 				return
 		
-		if c == "q": # quit
+		if c == 'q': # quit
 			app.terminate_(self)
 		
 		elif c == 'r': # relaunch
 			os.execv(__file__, [__file__, '--page', str(current_page), url.path()])
 		
-		elif c in "0123456789" + chr(13) + chr(127):
-			if c == '0' and not self.target_page: # skip trailing 0
+		elif c in "0123456789" + CR + DEL:
+			if c == '0' and not self.target_page: # skip leading 0
 				send(')')                         # and rather change zoom
 				return
-			if c == chr(13):
+			if c == CR:
 				if self.target_page:
 					goto_page(int(self.target_page)-1)
 				self.target_page = ''
-			elif c == chr(127):
+			elif c == DEL:
 				self.target_page = self.target_page[:-1]
 			else:
 				self.target_page += c
 		
-		elif c == chr(27): # esc
+		elif c == ESC: # esc
 			toggle_fullscreen(fullscreen=False)
 		
 		elif c == NSF5FunctionKey:
@@ -782,13 +783,13 @@ class PresenterView(NSView):
 			toggle_fullscreen()
 			toggle_fullscreen()
 		
-		elif c == "h":
+		elif c == 'h':
 			app.hide_(app)
 		
-		elif c == "?":
+		elif c == '?':
 			self.show_help = not self.show_help
 		
-		elif c == " ": # play/pause video
+		elif c == ' ': # play/pause video
 			if movie_view.isHidden(): # or toggle timer
 				send('t')
 				return
@@ -803,12 +804,12 @@ class PresenterView(NSView):
 			if movie_view.isHidden():
 				return
 			movie_view.pause_(self)
-			if c == "<":
+			if c == '<':
 				movie_view.stepBackward_(self)
 			else:
 				movie_view.stepForward_(self)
 		
-		elif c == "t": # toggle clock/timer
+		elif c == 't': # toggle clock/timer
 			self.absolute_time = not self.absolute_time
 			now = time.time()
 			if self.absolute_time:
@@ -821,32 +822,32 @@ class PresenterView(NSView):
 			self.elapsed_duration = 0
 			
 			self.duration += {
-				"{": -600,
-				"[":  -60,
-				"z":    0,
-				"]":   60,
-				"}":  600,
+				'{': -600,
+				'[':  -60,
+				'z':    0,
+				']':   60,
+				'}':  600,
 			}[c]
 			self.duration = max(0, self.duration)
 			self.duration_change_time = time.time()
 		
 		elif c in "+=-_0)": # notes or web view scale
-			if c == "=": c = "+"
-			if c == "_": c = "-"
-
+			if c == '=': c = '+'
+			if c == '_': c = '-'
+			
 			if web_view.isHidden(): # scaling notes
-				if c == "+":
+				if c == '+':
 					self.notes_scale *= 1.1
-				elif c == "-":
+				elif c == '-':
 					self.notes_scale /= 1.1
 				else:
 					self.notes_scale = 1.
 			else:                   # scaling web view
 				document = web_view.mainFrame().frameView().documentView()
 				clip = document.superview()
-				if c == "+":
+				if c == '+':
 					scale = (1.1, 1.1)
-				elif c == "-":
+				elif c == '-':
 					scale = (1./1.1, 1./1.1)
 				else:
 					scale = clip.convertSize_fromView_((1., 1.), None)
@@ -858,12 +859,12 @@ class PresenterView(NSView):
 		
 		else:
 			actions = {
-				"f":                     toggle_fullscreen,
-				".":                     toggle_black_view,
-				"b":                     toggle_black_view,
-				"w":                     toggle_web_view,
-				"m":                     toggle_movie_view,
-				"s":                     presentation_show,
+				'f':                     toggle_fullscreen,
+				'.':                     toggle_black_view,
+				'b':                     toggle_black_view,
+				'w':                     toggle_web_view,
+				'm':                     toggle_movie_view,
+				's':                     presentation_show,
 				NSLeftArrowFunctionKey:  prev_page,
 				NSUpArrowFunctionKey:    prev_page,
 				NSPageUpFunctionKey:     prev_page,
@@ -884,7 +885,7 @@ class PresenterView(NSView):
 					NSPageUpFunctionKey:     prev_section,
 					NSPageDownFunctionKey:   next_section,
 				})
-
+			
 			action = actions.get(c, nop)
 			action()
 		
@@ -1119,7 +1120,7 @@ def toggle_fullscreen(fullscreen=None):
 
 def add_item(menu, title, action, key="", modifiers=NSCommandKeyMask, target=app):
 	menu_item = menu.addItemWithTitle_action_keyEquivalent_(
-		NSString.localizedStringWithFormat_(" ".join(("%@",) * len(title)), *(_s(s) for s in title)),
+		NSString.localizedStringWithFormat_(' '.join(("%@",) * len(title)), *(_s(s) for s in title)),
 		action, key)
 	menu_item.setKeyEquivalentModifierMask_(modifiers)
 	menu_item.setTarget_(target)
@@ -1128,17 +1129,17 @@ def add_item(menu, title, action, key="", modifiers=NSCommandKeyMask, target=app
 def setup_menu(delegate):
 	main_menu = NSMenu.alloc().initWithTitle_("MainMenu")
 	
-	application_menuitem = main_menu.addItemWithTitle_action_keyEquivalent_("Application", None, " ")
+	application_menuitem = main_menu.addItemWithTitle_action_keyEquivalent_("Application", None, ' ')
 	application_menu = NSMenu.alloc().initWithTitle_("Application")
 	
 	add_item(application_menu, ["About", NAME], "about:", target=delegate)
 	add_item(application_menu, ["Check for updates…"], "update:", target=delegate)
 	application_menu.addItem_(NSMenuItem.separatorItem())
-	add_item(application_menu, ["Hide", NAME], "hide:", "h")
-	add_item(application_menu, ["Hide Others"], "hideOtherApplications:", "h", NSCommandKeyMask | NSAlternateKeyMask)
+	add_item(application_menu, ["Hide", NAME], "hide:", 'h')
+	add_item(application_menu, ["Hide Others"], "hideOtherApplications:", 'h', NSCommandKeyMask | NSAlternateKeyMask)
 	add_item(application_menu, ["Show All"], "unhideAllApplications:")
 	application_menu.addItem_(NSMenuItem.separatorItem())
-	add_item(application_menu, ["Quit", NAME], "terminate:", "q")
+	add_item(application_menu, ["Quit", NAME], "terminate:", 'q')
 	main_menu.setSubmenu_forItem_(application_menu, application_menuitem)
 	
 	app.setMainMenu_(main_menu)
@@ -1166,7 +1167,7 @@ else:
 	notification_delegate = UserNotificationCenterDelegate.alloc().init()
 	notification_center = NSUserNotificationCenter.defaultUserNotificationCenter()
 	notification_center.setDelegate_(notification_delegate)
-
+	
 	def notify_update():
 		if user_defaults.boolForKey_(NO_NOTIFY):
 			return
