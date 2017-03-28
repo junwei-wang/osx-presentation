@@ -5,7 +5,7 @@
 """
 A PDF presentation tool for Mac OS X
 
-Copyright (c) 2011--2015, IIHM/LIG - Renaud Blanch <http://iihm.imag.fr/blanch/>
+Copyright (c) 2011--2017, IIHM/LIG - Renaud Blanch <http://iihm.imag.fr/blanch/>
 Licence: GPLv3 or higher <http://www.gnu.org/licenses/gpl.html>
 """
 
@@ -23,6 +23,10 @@ import mimetypes
 from math import exp, hypot
 from collections import defaultdict
 
+if sys.version_info[0] == 3:
+	sys.stdin  = sys.stdin.detach()  # so that sys.stdin.readline returns bytes
+	sys.stdout = sys.stdout.detach() # so that sys.stdout.write accepts bytes
+
 
 # constants and helpers ######################################################
 
@@ -30,7 +34,7 @@ NAME = "Présentation"
 MAJOR, MINOR = 1, 7
 VERSION = "%s.%s" % (MAJOR, MINOR)
 HOME = "http://iihm.imag.fr/blanch/software/osx-presentation/"
-COPYRIGHT = "Copyright © 2011-2016 Renaud Blanch"
+COPYRIGHT = "Copyright © 2011-2017 Renaud Blanch"
 CREDITS = """
 Home: <a href='%s'>osx-presentation</a> <br/>
 Source: <a href='https://bitbucket.org/rndblnch/osx-presentation/src/tip/presentation.py'>presentation.py</a> <br/>
@@ -102,7 +106,7 @@ def exit_usage(message=None, code=0):
 	sys.exit(code)
 
 def exit_version():
-	sys.stdout.write("%s %s\n" % (os.path.basename(name), VERSION))
+	sys.stdout.write(("%s %s\n" % (os.path.basename(name), VERSION)).encode())
 	sys.exit()
 
 def exit_icon():
@@ -211,7 +215,6 @@ from QTKit import (
 
 if sys.version_info[0] == 3:
 	_s = NSString.stringWithString_
-	sys.stdin = sys.stdin.detach() # so that sys.stdin.readline returns bytes
 else:
 	_s = NSString.alloc().initWithUTF8String_
 
@@ -239,7 +242,7 @@ if launched_from_finder:
 	class DropApplicationDelegate(NSObject):
 		def application_openFile_(self, app, filename):
 			if filename != os.path.abspath(__file__).decode(sys.getfilesystemencoding()):
-				args.append(filename)
+				args.append(filename.UTF8String())
 		def applicationDidFinishLaunching_(self, notification):
 			app.stop_(self)
 	application_delegate = DropApplicationDelegate.alloc().init()
