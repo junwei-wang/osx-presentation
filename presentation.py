@@ -942,9 +942,13 @@ class PresenterView(NSView):
 		state = IDLE
 		refresher.refresh_()
 	
+	def rightMouseUp_(self, event):
+		prev_page()
+	
 	def click_(self, event):
 		annotation = self.page.annotationAtPoint_(self.press_location)
 		if annotation is None:
+			next_page()
 			return
 		
 		if type(annotation) != PDFAnnotationLink:
