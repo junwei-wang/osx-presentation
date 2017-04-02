@@ -371,7 +371,7 @@ def get_movie(url):
 	if not (url and url.scheme() == "file"):
 		return
 	mimetype, _ = mimetypes.guess_type(url.absoluteString())
-	if not (mimetype and mimetype.startswith("video")):
+	if not (mimetype and (mimetype.startswith("video") or mimetype.startswith("audio"))):
 		return
 	if not QTMovie.canInitWithURL_(url):
 		return
