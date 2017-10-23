@@ -732,6 +732,11 @@ class PresenterView(NSView):
 		annotation = annotations(self.page)[data]
 		return annotation.toolTip() or ""
 	
+	def zoom(self, point, percent):
+		bbox.translateXBy_yBy_(point.x, point.y)
+		bbox.scaleBy_(exp(percent*0.01))
+		bbox.translateXBy_yBy_(-point.x, -point.y)
+		refresher.refresh_()
 	
 	def keyDown_(self, event):
 		def send(c): # resend event with modified character
@@ -741,11 +746,18 @@ class PresenterView(NSView):
 		
 		c = event.characters()
 		
-		if hasModifiers(event, NSAlternateKeyMask):
+		if hasModifiers(event, NSCommandKeyMask):
 			c = event.charactersIgnoringModifiers()
-			if c == "i": # reset bbox to identity
-				global bbox
-				bbox = NSAffineTransform.transform()
+			if c in "+=-_0)i": # slides scale
+				if c == '=': c = '+'
+				if c == '_': c = '-'
+				if c == '+':
+					self.zoom(cursor_location,  5)
+				elif c == '-':
+					self.zoom(cursor_location, -5)
+				else: # reset bbox to identity
+					global bbox
+					bbox = NSAffineTransform.transform()
 		
 		if hasModifiers(event, NSControlKeyMask | NSCommandKeyMask):
 			c = event.charactersIgnoringModifiers()
@@ -892,19 +904,16 @@ class PresenterView(NSView):
 		refresher.refresh_()
 	
 	def scrollWheel_(self, event):
-		if not hasModifiers(event, NSAlternateKeyMask):
+		if not hasModifiers(event, NSCommandKeyMask):
 			return
-		p = event.locationInWindow()
-		p = self.transform.transformPoint_(p)
-		bbox.translateXBy_yBy_(p.x, p.y)
-		bbox.scaleBy_(exp(event.deltaY()*0.01))
-		bbox.translateXBy_yBy_(-p.x, -p.y)
-		refresher.refresh_()
+		point = event.locationInWindow()
+		point = self.transform.transformPoint_(point)
+		self.zoom(point, event.deltaY())
 	
 	def mouseDown_(self, event):
 		global state
 		assert state == IDLE
-		if hasModifiers(event, NSAlternateKeyMask):
+		if hasModifiers(event, NSCommandKeyMask):
 			state = BBOX
 		else:
 			self.press_location = self.transform.transformPoint_(event.locationInWindow())
