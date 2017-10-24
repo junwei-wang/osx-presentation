@@ -47,7 +47,10 @@ CURSOR = b'iVBORw0KGgoAAAANSUhEUgAAABEAAAAXCAQAAABHPWxsAAACU0lEQVR4nGJgIAgAAAAA/
 X_hot, Y_hot = 4, 18
 
 PRESENTER_FRAME   = ((100., 100.), (1024., 768.))
+FEED_HEIGHT = 40
+MINIATURE_WIDTH, MINIATURE_MARGIN = 120, 5
 MIN_POSTER_HEIGHT = 20.
+
 CR, ESC, DEL = (chr(k) for k in [13, 27, 127])
 
 HELP = [
@@ -398,6 +401,18 @@ for page_number in range(page_count):
 				movies[annotation] = (movie, movie.posterImage())
 
 
+# thumbnails
+
+thumbnails = {}
+for page_number in range(page_count):
+	page = pdf.pageAtIndex_(page_number)
+	_, (w, h) = page.boundsForBox_(kPDFDisplayBoxCropBox)
+	width = MINIATURE_WIDTH-MINIATURE_MARGIN
+	height = h*width/w
+	thumbnail = page.thumbnailOfSize_forBox_((width, height), kPDFDisplayBoxCropBox)
+	thumbnails[page_number] = (width, height), thumbnail
+
+
 # interaction state
 
 IDLE, BBOX, CLIC, DRAW = range(4)
@@ -582,15 +597,43 @@ class PresenterView(NSView):
 	notes_scale = 1.
 	target_page = ""
 	
+	miniature_origin = -MINIATURE_MARGIN
+	
+	def draw_miniatures(self):
+		(x, y), (width, height) = self.bounds()
+		x = width - MINIATURE_WIDTH
+		width = MINIATURE_WIDTH-MINIATURE_MARGIN
+		y = height
+		
+		total_height = 0
+		for i in range(page_count):
+			(w, h), _ = thumbnails[i]
+			total_height += h + MINIATURE_MARGIN
+		
+		self.miniature_origin = min(total_height-height, self.miniature_origin)
+		self.miniature_origin = max(self.miniature_origin, -MINIATURE_MARGIN)
+		
+		for i in range(page_count):
+			page = pdf.pageAtIndex_(i)
+			(w, h), image = thumbnails[i]
+			image.drawInRect_fromRect_operation_fraction_(
+				((x, self.miniature_origin+y-h), (w, h)), NSZeroRect, NSCompositeCopy, 1.
+			)
+			if i == current_page:
+				NSColor.yellowColor().setFill()
+				NSFrameRectWithWidth(((x, self.miniature_origin+y-h), (w, h)), 2)
+			y -= h
+			y -= MINIATURE_MARGIN
+	
+
 	def drawRect_(self, rect):
 		bounds = self.bounds()
 		width, height = bounds.size
+		width -= MINIATURE_WIDTH
 		
 		margin = width / 20.
 		current_width = (width-3*margin)*2/3.
 		font_size = margin/2.
-		
-		NSRectFillUsingOperation(bounds, NSCompositeClear)
 		
 		# current 
 		self.page = pdf.pageAtIndex_(current_page)
@@ -626,10 +669,14 @@ class PresenterView(NSView):
 		
 		NSGraphicsContext.restoreGraphicsState()
 		
-		# screen border
+		# screen border & cropping
 		NSColor.grayColor().setFill()
 		NSFrameRect(page_rect)
 		NSGraphicsContext.restoreGraphicsState()
+		NSRectFillUsingOperation(((0, 0), (margin, height)), NSCompositeClear)
+		NSRectFillUsingOperation(((margin, height-1.5*margin), (width+MINIATURE_WIDTH-margin, 1.5*margin)), NSCompositeClear)
+		NSRectFillUsingOperation(((margin+r*w, 0), (width+MINIATURE_WIDTH-margin+r*w, height)), NSCompositeClear)
+		NSRectFillUsingOperation(((0, 0), (width+MINIATURE_WIDTH, height-1.5*margin-r*h)), NSCompositeClear)
 		
 		
 		# time
@@ -681,6 +728,10 @@ class PresenterView(NSView):
 			]))
 			help_text.drawAtPoint_((2*margin+current_width, 0))
 		
+
+		# thumbnails
+		self.draw_miniatures()
+
 		# next page
 		if current_page < last_page:
 			page = pdf.pageAtIndex_(current_page+1)
@@ -696,12 +747,17 @@ class PresenterView(NSView):
 		transform.scaleXBy_yBy_(r, r)
 		transform.translateXBy_yBy_(0., -h)
 		transform.concat()
-		bbox.concat()
 		
 		NSEraseRect(page_rect)
 		page.drawWithBox_(kPDFDisplayBoxCropBox)
 		NSColor.colorWithCalibratedWhite_alpha_(.25, .25).setFill()
 		NSRectFillUsingOperation(page_rect, NSCompositeSourceAtop)
+		
+		ibbox = NSAffineTransform.alloc().initWithTransform_(bbox)
+		ibbox.invert()
+		ibbox.concat()
+		NSColor.grayColor().setFill()
+		NSFrameRect(page_rect)
 		NSGraphicsContext.restoreGraphicsState()
 	
 	
@@ -736,7 +792,6 @@ class PresenterView(NSView):
 		bbox.translateXBy_yBy_(point.x, point.y)
 		bbox.scaleBy_(exp(percent*0.01))
 		bbox.translateXBy_yBy_(-point.x, -point.y)
-		refresher.refresh_()
 	
 	def keyDown_(self, event):
 		def send(c): # resend event with modified character
@@ -904,11 +959,14 @@ class PresenterView(NSView):
 		refresher.refresh_()
 	
 	def scrollWheel_(self, event):
-		if not hasModifiers(event, NSCommandKeyMask):
-			return
-		point = event.locationInWindow()
-		point = self.transform.transformPoint_(point)
-		self.zoom(point, event.deltaY())
+		if hasModifiers(event, NSCommandKeyMask):
+			point = event.locationInWindow()
+			point = self.transform.transformPoint_(point)
+			self.zoom(point, event.deltaY())
+		else:
+			self.miniature_origin -= event.scrollingDeltaY()
+		refresher.refresh_()
+
 	
 	def mouseDown_(self, event):
 		global state
