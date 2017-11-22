@@ -605,11 +605,11 @@ class PresenterView(NSView):
 		(x, y), (width, height) = self.bounds()
 		x = width - MINIATURE_WIDTH
 		width = MINIATURE_WIDTH-MINIATURE_MARGIN
-		y = height
 		
 		self.miniature_origin = min(MINIATURES_HEIGHT-height, self.miniature_origin)
 		self.miniature_origin = max(self.miniature_origin, -MINIATURE_MARGIN)
 		
+		y = height
 		for i in range(page_count):
 			(w, h), image = thumbnails[i]
 			image.drawInRect_fromRect_operation_fraction_(
@@ -784,7 +784,7 @@ class PresenterView(NSView):
 		annotation = annotations(self.page)[data]
 		return annotation.toolTip() or ""
 	
-	def zoom(self, point, percent):
+	def zoomAt_by_(self, point, percent):
 		bbox.translateXBy_yBy_(point.x, point.y)
 		bbox.scaleBy_(exp(percent*0.01))
 		bbox.translateXBy_yBy_(-point.x, -point.y)
@@ -803,9 +803,9 @@ class PresenterView(NSView):
 				if c == '=': c = '+'
 				if c == '_': c = '-'
 				if c == '+':
-					self.zoom(cursor_location,  5)
+					self.zoomAt_by_(cursor_location,  5)
 				elif c == '-':
-					self.zoom(cursor_location, -5)
+					self.zoomAt_by_(cursor_location, -5)
 				else: # reset bbox to identity
 					global bbox
 					bbox = NSAffineTransform.transform()
@@ -958,7 +958,7 @@ class PresenterView(NSView):
 		if hasModifiers(event, NSCommandKeyMask):
 			point = event.locationInWindow()
 			point = self.transform.transformPoint_(point)
-			self.zoom(point, event.deltaY())
+			self.zoomAt_by_(point, event.deltaY())
 		else:
 			self.miniature_origin -= event.scrollingDeltaY()
 		refresher.refresh_()
