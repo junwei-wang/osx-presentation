@@ -220,7 +220,7 @@ from QTKit import (
 if sys.version_info[0] == 3:
 	_s = NSString.stringWithString_
 else:
-	_s = NSString.alloc().initWithUTF8String_
+	_s = NSString.stringWithUTF8String_
 
 def _h(s):
 	h, _ = NSAttributedString.alloc().initWithHTML_documentAttributes_(
