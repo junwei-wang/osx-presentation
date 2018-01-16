@@ -403,7 +403,7 @@ for page_number in range(page_count):
 
 # thumbnails
 
-MINIATURES_HEIGHT = 0
+origin = 0
 thumbnails = {}
 for page_number in range(page_count):
 	page = pdf.pageAtIndex_(page_number)
@@ -411,8 +411,9 @@ for page_number in range(page_count):
 	width = MINIATURE_WIDTH-MINIATURE_MARGIN
 	height = h*width/w
 	thumbnail = page.thumbnailOfSize_forBox_((width, height), kPDFDisplayBoxCropBox)
-	thumbnails[page_number] = (width, height), thumbnail
-	MINIATURES_HEIGHT += height + MINIATURE_MARGIN
+	thumbnails[page_number] = (width, height, origin), thumbnail
+	origin += height + MINIATURE_MARGIN
+MINIATURES_HEIGHT = origin
 
 
 # interaction state
@@ -598,30 +599,41 @@ class PresenterView(NSView):
 	annotation_state = None
 	notes_scale = 1.
 	target_page = ""
-	
-	miniature_origin = -MINIATURE_MARGIN
+	miniature_origin = 0
+	page_state = None
 	
 	def draw_miniatures(self):
-		(x, y), (width, height) = self.bounds()
+		_, (width, height) = self.bounds()
 		x = width - MINIATURE_WIDTH
 		width = MINIATURE_WIDTH-MINIATURE_MARGIN
+		
+		if self.page_state != current_page: # ensure current page in view when page changed
+			self.page_state = current_page
+			(_, h, o), _ = thumbnails[current_page]
+			self.miniature_origin = min(o-MINIATURE_MARGIN, self.miniature_origin)
+			self.miniature_origin = max(self.miniature_origin, o+h+MINIATURE_MARGIN-height)
 		
 		self.miniature_origin = min(MINIATURES_HEIGHT-height, self.miniature_origin)
 		self.miniature_origin = max(self.miniature_origin, -MINIATURE_MARGIN)
 		
-		y = height
 		for i in range(page_count):
-			(w, h), image = thumbnails[i]
+			(w, h, o), image = thumbnails[i]
 			image.drawInRect_fromRect_operation_fraction_(
-				((x, self.miniature_origin+y-h), (w, h)), NSZeroRect, NSCompositeCopy, 1.
+				((x, self.miniature_origin+height-o-h), (w, h)), NSZeroRect, NSCompositeCopy, 1.
 			)
 			if i == current_page:
 				NSColor.yellowColor().setFill()
-				NSFrameRectWithWidth(((x, self.miniature_origin+y-h), (w, h)), 2)
-			y -= h
-			y -= MINIATURE_MARGIN
-	
+				NSFrameRectWithWidth(((x, self.miniature_origin+height-o-h), (w, h)), 2)
 
+			page_number = NSString.stringWithString_("%s" % (i+1,))
+			attr = {
+				NSFontAttributeName:            NSFont.labelFontOfSize_(10),
+				NSForegroundColorAttributeName: NSColor.whiteColor(),
+			}
+			tw, _ = page_number.sizeWithAttributes_(attr)
+			page_number.drawAtPoint_withAttributes_((x-tw-2, self.miniature_origin+height-o-12), attr)
+	
+	
 	def drawRect_(self, rect):
 		bounds = self.bounds()
 		width, height = bounds.size
@@ -960,7 +972,10 @@ class PresenterView(NSView):
 			point = self.transform.transformPoint_(point)
 			self.zoomAt_by_(point, event.deltaY())
 		else:
-			self.miniature_origin -= event.scrollingDeltaY()
+			if event.hasPreciseScrollingDeltas():
+				self.miniature_origin -= event.scrollingDeltaY()
+			else:
+				self.miniature_origin -= event.scrollingDeltaY()*MINIATURE_WIDTH
 		refresher.refresh_()
 
 	
@@ -1007,22 +1022,18 @@ class PresenterView(NSView):
 	
 	def rightMouseUp_(self, event):
 		prev_page()
+		refresher.refresh_()
 	
 	def click_(self, event):
 		_, (width, height) = self.bounds()
 		ex, ey = event.locationInWindow()
 		if ex > width - MINIATURE_WIDTH: # miniature
-			y = height
-
 			for i in range(page_count):
-				(_, h), image = thumbnails[i]
-				y -= h
-				y -= MINIATURE_MARGIN
-				if ey > self.miniature_origin+y:
+				(_, h, o), _ = thumbnails[i]
+				if ey + h + MINIATURE_MARGIN > self.miniature_origin-o+height:
 					break
 			goto_page(i)
 			return
-
 
 		annotation = self.page.annotationAtPoint_(self.press_location)
 		if annotation is None:
