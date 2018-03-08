@@ -1,4 +1,4 @@
-I am happy to announce the release of Présentation.app 1.7.
+I am happy to announce the release of Présentation.app 1.8.
 
 Présentation.app is a presentation tool for pdf slides (e.g. produced using LaTeX and the popular beamer class) for Mac OS X.
 You can download this release here: http://iihm.imag.fr/blanch/software/osx-presentation/releases/
@@ -22,6 +22,13 @@ Its most notable features are:
 
 
 Changes since 1.0
+
+1.8:
+  - added thumbnails navigation
+  - added support to go forth/back with left/right mouse click
+  - added support for audio media files and animated gif
+  - added official support for direct manipulation of the pdf bbox
+  - fixed "Open with > Présentation.app" service
 
 1.7:
   - reloading now keeps the current page

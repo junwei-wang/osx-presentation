@@ -5,7 +5,7 @@
 """
 A PDF presentation tool for Mac OS X
 
-Copyright (c) 2011--2017, IIHM/LIG - Renaud Blanch <http://iihm.imag.fr/blanch/>
+Copyright (c) 2011--2018, IIHM/LIG - Renaud Blanch <http://iihm.imag.fr/blanch/>
 Licence: GPLv3 or higher <http://www.gnu.org/licenses/gpl.html>
 """
 
@@ -31,7 +31,7 @@ if sys.version_info[0] == 3:
 # constants and helpers ######################################################
 
 NAME = "Présentation"
-MAJOR, MINOR = 1, 7
+MAJOR, MINOR = 1, 8
 VERSION = "%s.%s" % (MAJOR, MINOR)
 HOME = "http://iihm.imag.fr/blanch/software/osx-presentation/"
 COPYRIGHT = "Copyright © 2011-2017 Renaud Blanch"
@@ -448,8 +448,6 @@ def draw_page(page):
 		bounds_size = bounds.size
 		if bounds_size.height < MIN_POSTER_HEIGHT:
 			continue
-		
-		NSRectFillUsingOperation(bounds, NSCompositeCopy)
 		
 		poster_size = poster.size()
 		aspect_ratio = ((poster_size.width*bounds_size.height)/
