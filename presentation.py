@@ -31,10 +31,10 @@ if sys.version_info[0] == 3:
 # constants and helpers ######################################################
 
 NAME = "Présentation"
-MAJOR, MINOR = 1, 7
+MAJOR, MINOR = 1, 8
 VERSION = "%s.%s" % (MAJOR, MINOR)
 HOME = "http://iihm.imag.fr/blanch/software/osx-presentation/"
-COPYRIGHT = "Copyright © 2011-2017 Renaud Blanch"
+COPYRIGHT = "Copyright © 2011-2018 Renaud Blanch"
 CREDITS = """
 Home: <a href='%s'>osx-presentation</a> <br/>
 Source: <a href='https://bitbucket.org/rndblnch/osx-presentation/src/tip/presentation.py'>presentation.py</a> <br/>
@@ -374,7 +374,8 @@ def get_movie(url):
 	if not (url and url.scheme() == "file"):
 		return
 	mimetype, _ = mimetypes.guess_type(url.absoluteString())
-	if not (mimetype and (mimetype.startswith("video") or mimetype.startswith("audio"))):
+	NSLog(mimetype)
+	if not (mimetype and any(mimetype.startswith(t) for t in ["video", "audio", "image/gif"])):
 		return
 	if not QTMovie.canInitWithURL_(url):
 		return
@@ -448,8 +449,6 @@ def draw_page(page):
 		bounds_size = bounds.size
 		if bounds_size.height < MIN_POSTER_HEIGHT:
 			continue
-		
-		NSRectFillUsingOperation(bounds, NSCompositeCopy)
 		
 		poster_size = poster.size()
 		aspect_ratio = ((poster_size.width*bounds_size.height)/
