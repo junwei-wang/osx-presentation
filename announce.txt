@@ -29,6 +29,7 @@ Changes since 1.0
   - added support for audio media files and animated gif
   - added official support for direct manipulation of the pdf bbox
   - fixed "Open with > Présentation.app" service
+  - fixed issues and crash on Mac OS X 10.14 (Mojave)
 
 1.7:
   - reloading now keeps the current page
