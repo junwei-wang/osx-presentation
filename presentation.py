@@ -599,6 +599,7 @@ class PresenterView(NSView):
 	target_page = ""
 	miniature_origin = 0
 	page_state = None
+	page = None
 	
 	def draw_miniatures(self):
 		_, (width, height) = self.bounds()
@@ -769,6 +770,9 @@ class PresenterView(NSView):
 	
 	def resetCursorRects(self):
 		# updates rectangles only if needed (so that tooltip timeouts work)
+		if self.page is None:
+			return
+		
 		annotation_state = (self.transform.transformStruct(), current_page)
 		if self.annotation_state == annotation_state:
 			return
