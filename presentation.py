@@ -1089,10 +1089,14 @@ def create_window(title, Window=NSWindow):
 	window.setBackgroundColor_(NSColor.blackColor())
 	return window
 
-def create_view(window, View=NSView):
-	view = View.alloc().initWithFrame_(window.frame())
-	window.setContentView_(view)
-	window.setInitialFirstResponder_(view)
+def create_view(View, frame=None, window=None):
+	if frame is None:
+		frame = window.frame()
+	view = View.alloc().initWithFrame_(frame)
+	view.setBackgroundColor_(NSColor.blackColor())
+	if window is not None:
+		window.setContentView_(view)
+		window.setInitialFirstResponder_(view)
 	return view
 
 def add_subview(view, subview, autoresizing_mask=NSViewWidthSizable|NSViewHeightSizable):
@@ -1109,17 +1113,12 @@ frame = presentation_view.frame()
 
 # slides
 
-slide_view = SlideView.alloc().initWithFrame_(frame)
+slide_view = create_view(SlideView, frame=frame)
 add_subview(presentation_view, slide_view)
 
 # black view
 
-class BlackView(NSView):
-	def drawRect_(self, rect):
-		bounds = self.bounds()
-		NSRectFillUsingOperation(bounds, NSCompositeClear)
-
-black_view = BlackView.alloc().initWithFrame_(frame)
+black_view = create_view(NSView, frame=frame)
 add_subview(presentation_view, black_view)
 
 # web view
@@ -1175,7 +1174,7 @@ presentation_show()
 
 presenter_window = create_window(file_name)
 presenter_window.setAcceptsMouseMovedEvents_(True)
-presenter_view   = create_view(presenter_window, PresenterView)
+presenter_view   = create_view(PresenterView, window=presenter_window)
 
 presenter_window.center()
 presenter_window.makeFirstResponder_(presenter_view)
