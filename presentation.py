@@ -617,12 +617,17 @@ class PresenterView(NSView):
 		
 		for i in range(page_count):
 			(w, h, o), image = thumbnails[i]
+			y = self.miniature_origin+height-o-h
+			if y < -h:
+				break
+			if y > height:
+				continue
 			image.drawInRect_fromRect_operation_fraction_(
-				((x, self.miniature_origin+height-o-h), (w, h)), NSZeroRect, NSCompositeCopy, 1.
+				((x, y), (w, h)), NSZeroRect, NSCompositeCopy, 1.
 			)
 			if i == current_page:
 				NSColor.yellowColor().setFill()
-				NSFrameRectWithWidth(((x, self.miniature_origin+height-o-h), (w, h)), 2)
+				NSFrameRectWithWidth(((x, y), (w, h)), 2)
 
 			page_number = NSString.stringWithString_("%s" % (i+1,))
 			attr = {
@@ -630,7 +635,7 @@ class PresenterView(NSView):
 				NSForegroundColorAttributeName: NSColor.whiteColor(),
 			}
 			tw, _ = page_number.sizeWithAttributes_(attr)
-			page_number.drawAtPoint_withAttributes_((x-tw-2, self.miniature_origin+height-o-12), attr)
+			page_number.drawAtPoint_withAttributes_((x-tw-2, y+h-12), attr)
 	
 	
 	def drawRect_(self, rect):
