@@ -394,7 +394,7 @@ for page_number in range(page_count):
 		annotation_type = type(annotation)
 		if annotation_type == PDFAnnotationText:
 			annotation.setShouldDisplay_(False)
-			notes[page_number].append(annotation.contents())
+			notes[page_number].append(annotation.contents().replace('\r', '\n'))
 		elif annotation_type == PDFAnnotationLink:
 			movie = get_movie(annotation.URL())
 			if movie:
@@ -595,7 +595,7 @@ class PresenterView(NSView):
 	duration_change_time = 0
 	show_help = True
 	annotation_state = None
-	notes_scale = 1.
+	notes_scale = .75
 	target_page = ""
 	miniature_origin = 0
 	page_state = None
@@ -723,11 +723,17 @@ class PresenterView(NSView):
 		                                         height-1.4*margin), attr)
 		
 		# notes
-		note = NSString.stringWithString_("\n".join(notes[current_page]))
-		note.drawAtPoint_withAttributes_((margin, font_size), {
+		attr = {
 			NSFontAttributeName:            NSFont.labelFontOfSize_(font_size*self.notes_scale),
 			NSForegroundColorAttributeName: NSColor.whiteColor(),
-		})
+		}
+		em, _ = NSString.stringWithString_("m").sizeWithAttributes_(attr)
+		columns = int(2.*current_width/em)
+		note = NSString.stringWithString_("\n\n".join(
+			"\n".join(textwrap.fill(line, columns) for line in note.split("\n"))
+			for note in notes[current_page]
+		))
+		note.drawAtPoint_withAttributes_((margin, font_size), attr)
 		
 		# help
 		if self.show_help:
