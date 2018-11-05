@@ -128,7 +128,7 @@ try:
 except getopt.GetoptError as message:
 	exit_usage(message, 1)
 
-start_page = 0
+start_page = None
 presentation_duration = 0
 show_feed = False
 
@@ -238,6 +238,11 @@ info = bundle.localizedInfoDictionary() or bundle.infoDictionary()
 info['CFBundleName'] = _s(NAME)
 info['NSAppTransportSecurity'] = {'NSAllowsArbitraryLoads': YES}
 
+ID = "fr.imag.iihm.blanch.osx-presentation"
+NO_NOTIFY    = '.'.join([ID, 'no_notify'])
+RECENT_FILES = '.'.join([ID, 'recent_files'])
+user_defaults = NSUserDefaults.standardUserDefaults()
+
 
 restarted = False # has the application been restarted before actual launch
 
@@ -283,6 +288,14 @@ if not pdf:
 
 
 # navigation
+
+recent_files = user_defaults.dictionaryForKey_(RECENT_FILES)
+recent_files = {} if recent_files is None else recent_files.mutableCopy()
+if start_page is None:
+	if url.path() in recent_files:
+		start_page = recent_files[url.path()]
+	else:
+		start_page = 0
 
 page_count = pdf.pageCount()
 first_page, last_page = 0, page_count-1
@@ -1255,11 +1268,6 @@ def setup_menu(delegate):
 
 # notifications
 
-ID = "fr.imag.iihm.blanch.osx-presentation"
-NO_NOTIFY = '.'.join([ID, 'no_notify'])
-
-user_defaults = NSUserDefaults.alloc().init()
-
 try:
 	from Foundation import (NSUserNotificationCenter, NSUserNotification)
 except ImportError:
@@ -1355,6 +1363,8 @@ class ApplicationDelegate(NSObject):
 		toggle_fullscreen(fullscreen=self.fullscreen)
 	
 	def applicationWillTerminate_(self, notification):
+		recent_files[url.path()] = current_page
+		user_defaults.setObject_forKey_(recent_files, RECENT_FILES)
 		presentation_show()
 
 application_delegate = ApplicationDelegate.alloc().init()
