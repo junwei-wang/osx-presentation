@@ -109,6 +109,15 @@ def exit_usage(message=None, code=0):
 	sys.stderr.write(usage)
 	sys.exit(code)
 
+def exit_popup(message):
+	message = textwrap.dedent(message)
+	command = """
+	tell application "System Events"
+		display dialog "%(msg)s" with icon 2 buttons {"Ok"} default button 1
+	end tell
+	""" % { "msg": message }
+	os.execv("/usr/bin/osascript", ["/usr/bin/osascript", "-e", command])
+
 def exit_version():
 	sys.stdout.write(("%s %s\n" % (os.path.basename(name), VERSION)).encode())
 	sys.exit()
@@ -152,7 +161,19 @@ if len(args) > 1:
 
 # application init ###########################################################
 
-from objc import setVerbose
+try:
+	from objc import setVerbose
+except ImportError:
+	exit_popup("""\
+		The Python executable referenced by
+		'/usr/bin/env python'
+		can not import the PyObjC package.
+		
+		You may have installed your own version of Python and made it take over the system one.
+		
+		For Présentation.app to work, you have to install the PyObjC package for this version of Python.
+	""")
+	
 setVerbose(1)
 
 from objc import nil, NO, YES
