@@ -222,7 +222,7 @@ from Quartz import (
 	kPDFActionNamedNextPage, kPDFActionNamedPreviousPage,
 	kPDFActionNamedFirstPage, kPDFActionNamedLastPage,
 	kPDFActionNamedGoBack, kPDFActionNamedGoForward,
-	kPDFDisplayBoxCropBox,
+	kPDFDisplayBoxMediaBox, kPDFDisplayBoxCropBox,
 )
 
 from WebKit import (
@@ -433,6 +433,22 @@ for page_number in range(page_count):
 			movie = get_movie(annotation.URL())
 			if movie:
 				movies[annotation] = (movie, movie.posterImage())
+
+
+# beamer notes
+
+_, (w, h) = page.boundsForBox_(kPDFDisplayBoxMediaBox)
+if w/h > 7/3: # likely to be a two screens pdf
+	for page_number in range(page_count):
+		page = pdf.pageAtIndex_(page_number)
+		(x, y), (w, h) = page.boundsForBox_(kPDFDisplayBoxMediaBox)
+		w /= 2
+		page.setBounds_forBox_(((x, y), (w, h)), kPDFDisplayBoxCropBox)
+		selection = page.selectionForRect_(((x+w, y), (w, h)))
+		notes[page_number].append('\n'.join(
+			line.string()
+			for line in selection.selectionsByLine() or []
+		))
 
 
 # thumbnails
