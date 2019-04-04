@@ -408,6 +408,7 @@ def get_movie(url):
 	if not (url and url.scheme() == "file"):
 		return
 	mimetype, _ = mimetypes.guess_type(url.absoluteString())
+	# TODO: check on NSWorkspace.typeOfFile:error:
 	if not (mimetype and any(mimetype.startswith(t) for t in ["video", "audio", "image/gif"])):
 		return
 	if not QTMovie.canInitWithURL_(url):
@@ -420,7 +421,7 @@ def get_movie(url):
 def annotations(page):
 	return page.annotations() or []
 
-notes  = defaultdict(list)
+pdf_notes  = defaultdict(list)
 movies = {}
 for page_number in range(page_count):
 	page = pdf.pageAtIndex_(page_number)
@@ -428,7 +429,7 @@ for page_number in range(page_count):
 		annotation_type = type(annotation)
 		if annotation_type == PDFAnnotationText:
 			annotation.setShouldDisplay_(False)
-			notes[page_number].append(annotation.contents().replace('\r', '\n'))
+			pdf_notes[page_number].append(annotation.contents().replace('\r', '\n'))
 		elif annotation_type == PDFAnnotationLink:
 			movie = get_movie(annotation.URL())
 			if movie:
@@ -437,18 +438,29 @@ for page_number in range(page_count):
 
 # beamer notes
 
-_, (w, h) = page.boundsForBox_(kPDFDisplayBoxMediaBox)
+def lines(selection):
+	return [line.string() for line in selection.selectionsByLine() or []]
+
+beamer_notes = defaultdict(list)
+title_page = pdf.pageAtIndex_(0)
+(x, y), (w, h) = title_page.boundsForBox_(kPDFDisplayBoxMediaBox)
+
 if w/h > 7/3: # likely to be a two screens pdf
+	# heuristic to guess template of note slide
+	w /= 2
+	title = lines(title_page.selectionForRect_(((x, y), (w, h))))
+	miniature = lines(title_page.selectionForRect_(((x+w+3*w/4, y+3*h/4), (w/4, h/4))))
+	header = miniature and all( # miniature do not have navigation
+		line in title
+		for line in miniature
+	)
 	for page_number in range(page_count):
 		page = pdf.pageAtIndex_(page_number)
 		(x, y), (w, h) = page.boundsForBox_(kPDFDisplayBoxMediaBox)
 		w /= 2
 		page.setBounds_forBox_(((x, y), (w, h)), kPDFDisplayBoxCropBox)
-		selection = page.selectionForRect_(((x+w, y), (w, h)))
-		notes[page_number].append('\n'.join(
-			line.string()
-			for line in selection.selectionsByLine() or []
-		))
+		selection = page.selectionForRect_(((x+w, y), (w, 3*h/4 if header else h)))
+		beamer_notes[page_number].append('\n'.join(lines(selection)))
 
 
 # thumbnails
@@ -779,9 +791,17 @@ class PresenterView(NSView):
 		}
 		em, _ = NSString.stringWithString_("m").sizeWithAttributes_(attr)
 		columns = int(2.*current_width/em)
-		note = NSString.stringWithString_("\n\n".join(
-			"\n".join(textwrap.fill(line, columns) for line in note.split("\n"))
-			for note in notes[current_page]
+		
+		
+		note = NSString.stringWithString_("".join(
+			"\n\n".join(
+				"\n".join(
+					textwrap.fill(line, columns)
+					for line in note.split("\n")
+				)
+				for note in notes[current_page]
+			)
+			for notes in [pdf_notes, beamer_notes]
 		))
 		note.drawAtPoint_withAttributes_((margin, font_size), attr)
 		
