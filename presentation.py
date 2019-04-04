@@ -1047,7 +1047,7 @@ class PresenterView(NSView):
 			action = actions.get(c, nop)
 			action()
 		
-		refresher.refresh_()
+		refresher.refresh()
 	
 	def scrollWheel_(self, event):
 		if hasModifiers(event, NSCommandKeyMask):
@@ -1059,7 +1059,7 @@ class PresenterView(NSView):
 				self.miniature_origin -= event.scrollingDeltaY()
 			else:
 				self.miniature_origin -= event.scrollingDeltaY()*MINIATURE_WIDTH
-		refresher.refresh_()
+		refresher.refresh([self])
 
 	
 	def mouseDown_(self, event):
@@ -1101,11 +1101,11 @@ class PresenterView(NSView):
 		if state == CLIC:
 			self.click_(event)
 		state = IDLE
-		refresher.refresh_()
+		refresher.refresh()
 	
 	def rightMouseUp_(self, event):
 		prev_page()
-		refresher.refresh_()
+		refresher.refresh()
 	
 	def click_(self, event):
 		_, (width, height) = self.bounds()
@@ -1438,17 +1438,24 @@ if restarted:
 
 class Refresher(NSObject):
 	def refresh_(self, timer=None):
-		views = [window.contentView() for window in app.windows()]
+		self.refresh(timer.userInfo())
+	
+	def refresh(self, views=None):
+		if views is None:
+			views = [window.contentView() for window in app.windows()]
+		else:
+			views = views[:]
 		while views:
 			view = views.pop()
 			view.setNeedsDisplay_(True)
 			for subview in view.subviews():
 				views.append(subview)
+
 refresher = Refresher.alloc().init()
 
 refresher_timer = NSTimer.scheduledTimerWithTimeInterval_target_selector_userInfo_repeats_(
 	1.,
 	refresher, "refresh:",
-	nil, YES)
+	[presenter_view], YES)
 
 sys.exit(app.run())
