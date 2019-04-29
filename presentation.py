@@ -118,6 +118,9 @@ def exit_popup(message):
 	""" % { "msg": message }
 	os.execv("/usr/bin/osascript", ["/usr/bin/osascript", "-e", command])
 
+def exit_relaunch(path, page):
+	os.execv(__file__, [__file__, '--page', str(page), path])
+
 def exit_version():
 	sys.stdout.write(("%s %s\n" % (os.path.basename(name), VERSION)).encode())
 	sys.exit()
@@ -714,6 +717,7 @@ class PresenterView(NSView):
 		page_rect = self.page.boundsForBox_(kPDFDisplayBoxCropBox)
 		_, (w, h) = page_rect
 		r = current_width/w
+		current_height = h*r
 		
 		NSGraphicsContext.saveGraphicsState()
 		transform = NSAffineTransform.transform()
@@ -785,25 +789,18 @@ class PresenterView(NSView):
 		                                         height-1.4*margin), attr)
 		
 		# notes
-		attr = {
-			NSFontAttributeName:            NSFont.labelFontOfSize_(font_size*self.notes_scale),
-			NSForegroundColorAttributeName: NSColor.whiteColor(),
-		}
-		em, _ = NSString.stringWithString_("m").sizeWithAttributes_(attr)
-		columns = int(2.*current_width/em)
-		
-		
 		note = NSString.stringWithString_("".join(
-			"\n\n".join(
-				"\n".join(
-					textwrap.fill(line, columns)
-					for line in note.split("\n")
-				)
-				for note in notes[current_page]
-			)
+			"\n\n".join(notes[current_page])
 			for notes in [pdf_notes, beamer_notes]
 		))
-		note.drawAtPoint_withAttributes_((margin, font_size), attr)
+		note.drawInRect_withAttributes_(
+			((margin, font_size), (current_width, height-current_height-2.5*margin)),
+			{
+ 				NSFontAttributeName:            NSFont.labelFontOfSize_(font_size*self.notes_scale),
+	 			NSForegroundColorAttributeName: NSColor.whiteColor(),
+			}
+		)
+		
 		
 		# help
 		if self.show_help:
@@ -914,7 +911,7 @@ class PresenterView(NSView):
 			app.terminate_(self)
 		
 		elif c == 'r': # relaunch
-			os.execv(__file__, [__file__, '--page', str(current_page), url.path()])
+			exit_relaunch(url.path(), current_page)
 		
 		elif c in "0123456789" + CR + DEL:
 			if c == '0' and not self.target_page: # skip leading 0

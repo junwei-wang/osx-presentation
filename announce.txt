@@ -1,4 +1,4 @@
-I am happy to announce the release of Présentation.app 1.8.
+I am happy to announce the release of Présentation.app 1.9.
 
 Présentation.app is a presentation tool for pdf slides (e.g. produced using LaTeX and the popular beamer class) for Mac OS X.
 You can download this release here: http://iihm.imag.fr/blanch/software/osx-presentation/releases/
@@ -22,6 +22,12 @@ Its most notable features are:
 
 
 Changes since 1.0
+
+1.9:
+  - added support for beamer's notes on second screen
+  - added test for presence of pyobjc (since conda puts its python on the path)
+  - enhanced performance of thumbnails scrolling
+  -
 
 1.8:
   - added thumbnails navigation
