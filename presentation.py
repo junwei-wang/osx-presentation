@@ -31,10 +31,10 @@ if sys.version_info[0] == 3:
 # constants and helpers ######################################################
 
 NAME = "Présentation"
-MAJOR, MINOR = 1, 8
+MAJOR, MINOR = 1, 9
 VERSION = "%s.%s" % (MAJOR, MINOR)
 HOME = "http://iihm.imag.fr/blanch/software/osx-presentation/"
-COPYRIGHT = "Copyright © 2011-2018 Renaud Blanch"
+COPYRIGHT = "Copyright © 2011-2019 Renaud Blanch"
 CREDITS = """
 Home: <a href='%s'>osx-presentation</a> <br/>
 Source: <a href='https://bitbucket.org/rndblnch/osx-presentation/src/tip/presentation.py'>presentation.py</a> <br/>

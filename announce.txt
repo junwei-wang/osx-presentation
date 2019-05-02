@@ -27,7 +27,7 @@ Changes since 1.0
   - added support for beamer's notes on second screen
   - added test for presence of pyobjc (since conda puts its python on the path)
   - enhanced performance of thumbnails scrolling
-  -
+  - reopening a file goes directly to the last displayed page
 
 1.8:
   - added thumbnails navigation
