@@ -1260,6 +1260,7 @@ presenter_view   = create_view(PresenterView, window=presenter_window)
 
 presenter_window.center()
 presenter_window.makeFirstResponder_(presenter_view)
+presentation_window.makeFirstResponder_(presenter_view)
 
 
 # handling full screens ######################################################
