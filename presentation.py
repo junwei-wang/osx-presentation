@@ -182,7 +182,7 @@ setVerbose(1)
 from objc import nil, NO, YES
 from Foundation import (
 	NSLog, NSNotificationCenter,
-	NSObject, NSTimer, NSError, NSString, NSData,
+	NSObject, NSTimer, NSError, NSString, NSData, NSArray,
 	NSAttributedString, NSUnicodeStringEncoding,
 	NSURL, NSURLRequest, NSURLConnection,
 	NSURLRequestReloadIgnoringLocalCacheData,
@@ -290,7 +290,7 @@ else:
 	class Opener(NSObject):
 		def getURL(self):
 			dialog = NSOpenPanel.openPanel()
-			dialog.setAllowedFileTypes_(["pdf"])
+			dialog.setAllowedFileTypes_(NSArray.arrayWithObjects_("pdf"))
 			if dialog.runModal() == NSFileHandlingPanelOKButton:
 				global url
 				url, = dialog.URLs()
