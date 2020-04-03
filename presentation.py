@@ -188,6 +188,7 @@ from Foundation import (
 	NSURLRequestReloadIgnoringLocalCacheData,
 	NSAffineTransform,
 	NSUserDefaults,
+	NSKeyValueObservingOptionOld, NSKeyValueObservingOptionNew,
 )
 
 from AppKit import (
@@ -219,6 +220,12 @@ from AppKit import (
 	NSBezierPath, NSRoundLineCapStyle,
 )
 
+try:
+	from AppKit import NSEventTypeApplicationDefined
+except:
+	from AppKit import NSApplicationDefined as NSEventTypeApplicationDefined
+
+
 from Quartz import (
 	PDFDocument, PDFAnnotationText, PDFAnnotationLink,
 	PDFActionNamed,
@@ -232,13 +239,15 @@ from WebKit import (
 	WebView,
 )
 
-from QTKit import (
-	QTMovie, QTMovieView,
+from AVFoundation import (
+	AVAsset, AVPlayerItem,
+	AVPlayer, AVPlayerLayer,
 )
 
-# QTKit is deprecated in 10.9 but AVFoundation will only be in PyObjC-3.0+
-# so wait and see, and remember for future reference:
-# https://developer.apple.com/library/mac/technotes/tn2300/_index.html
+try:
+	from AVFoundation import AVPlayerItemStatusReadyToPlay
+except:
+	AVPlayerItemStatusReadyToPlay = 1
 
 
 if sys.version_info[0] == 3:
@@ -406,20 +415,59 @@ def prev_section(): goto_page(_prev(sections))
 
 # annotations
 
+player = AVPlayer.playerWithURL_(None)
+nop_event = NSEvent.otherEventWithType_location_modifierFlags_timestamp_windowNumber_context_subtype_data1_data2_(
+	NSEventTypeApplicationDefined, (0, 0), 0, 0., 0, None, 0, 0, 0
+)
+
+class PlayerItemObserver(NSObject):
+	def observeValueForKeyPath_ofObject_change_context_(self, keyPath, item, change, context):
+		assert type(item) == AVPlayerItem
+		assert change["new"] != change["old"]
+		assert change["new"] == item.status()
+		item.removeObserver_forKeyPath_(self, "status")
+
+#		print(item.asset())
+#		print(item.loadedTimeRanges())
+#		print(item.tracks())
+#		print(item.duration())
+#		print(item.status())
+		
+		self.playable = item.status() == AVPlayerItemStatusReadyToPlay
+		app.stop_(self)
+		app.postEvent_atStart_(nop_event, True) # we are not in event thread
+
+item_observer = PlayerItemObserver.alloc().init()
+
+
 def get_movie(url):
 	"""return a QTMovie object from an url if possible/desirable"""
 	if not (url and url.scheme() == "file"):
 		return
 	mimetype, _ = mimetypes.guess_type(url.absoluteString())
-	# TODO: check on NSWorkspace.typeOfFile:error:
 	if not (mimetype and any(mimetype.startswith(t) for t in ["video", "audio", "image/gif"])):
 		return
-	if not QTMovie.canInitWithURL_(url):
+
+	player_item = AVPlayerItem.playerItemWithAsset_automaticallyLoadedAssetKeys_(
+		AVAsset.assetWithURL_(url),
+		["playable",],
+	)
+	player_item.addObserver_forKeyPath_options_context_(
+		item_observer, "status",
+		NSKeyValueObservingOptionOld | NSKeyValueObservingOptionNew,
+		None,
+	)
+	
+	player.replaceCurrentItemWithPlayerItem_(player_item)
+	app.run()
+	restarted = True
+
+	NSLog("%@, %@, %@", url, player_item, item_observer.playable)
+	if not item_observer.playable:
 		return
-	movie, error = QTMovie.movieWithURL_error_(url, None)
-	if error:
-		return
-	return movie
+	
+	return player_item
+
 
 def annotations(page):
 	return page.annotations() or []
@@ -436,7 +484,8 @@ for page_number in range(page_count):
 		elif annotation_type == PDFAnnotationLink:
 			movie = get_movie(annotation.URL())
 			if movie:
-				movies[annotation] = (movie, movie.posterImage())
+#				movies[annotation] = (movie, movie.posterImage())
+				movies[annotation] = (movie, None)
 
 
 # beamer notes

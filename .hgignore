@@ -3,3 +3,4 @@ osx-presentation-*
 presentation.icns
 presentation.iconset/*
 demo/*
+test/*
