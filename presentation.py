@@ -427,12 +427,6 @@ class PlayerItemObserver(NSObject):
 		assert change["new"] == item.status()
 		item.removeObserver_forKeyPath_(self, "status")
 
-#		print(item.asset())
-#		print(item.loadedTimeRanges())
-#		print(item.tracks())
-#		print(item.duration())
-#		print(item.status())
-		
 		self.playable = item.status() == AVPlayerItemStatusReadyToPlay
 		app.stop_(self)
 		app.postEvent_atStart_(nop_event, True) # we are not in event thread
@@ -462,7 +456,6 @@ def get_movie(url):
 	app.run()
 	restarted = True
 
-	NSLog("%@, %@, %@", url, player_item, item_observer.playable)
 	if not item_observer.playable:
 		return
 	
@@ -998,20 +991,20 @@ class PresenterView(NSView):
 				send('t')
 				return
 			
-			playing = movie_view.movie().rate() > 0.
+			playing = player.rate() > 0.
 			if playing:
-				movie_view.pause_(self)
+				player.pause()
 			else:
-				movie_view.play_(self)
+				player.play()
 		
 		elif c in "<>": # movie navigation
 			if movie_view.isHidden():
 				return
-			movie_view.pause_(self)
+			player.pause()
 			if c == '<':
-				movie_view.stepBackward_(self)
+				player.currentItem().stepByCount_(-1)
 			else:
-				movie_view.stepForward_(self)
+				player.currentItem().stepByCount_(1)
 		
 		elif c == 't': # toggle clock/timer
 			self.absolute_time = not self.absolute_time
@@ -1173,10 +1166,10 @@ class PresenterView(NSView):
 			return
 		
 		if annotation in movies:
-			movie, _ = movies[annotation]
-			movie_view.setMovie_(movie)
+			player_item, _ = movies[annotation]
+			player.replaceCurrentItemWithPlayerItem_(player_item)
 			presentation_show(movie_view)
-			movie_view.play_(self)
+			player.play()
 			return
 		
 		action = annotation.mouseUpAction()
@@ -1266,14 +1259,16 @@ add_subview(presentation_view, web_view)
 
 # movie view
 
-class MovieView(QTMovieView):
+class MovieView(NSView):
 	def setHidden_(self, hidden):
-		QTMovieView.setHidden_(self, hidden)
+		NSView.setHidden_(self, hidden)
 		if self.isHidden():
-			self.pause_(self)
-
-movie_view = MovieView.alloc().initWithFrame_(frame)
-movie_view.setPreservesAspectRatio_(True)
+			player.pause()
+movie_view = create_view(MovieView, frame=frame)
+movie_view.setWantsLayer_(True)
+player_layer = AVPlayerLayer.playerLayerWithPlayer_(player)
+player_layer.setFrame_(movie_view.bounds())
+movie_view.setLayer_(player_layer)
 
 add_subview(presentation_view, movie_view)
 
