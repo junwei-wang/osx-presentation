@@ -218,6 +218,7 @@ from AppKit import (
 	NSF5FunctionKey,
 	NSScreen, NSWorkspace, NSImage,
 	NSBezierPath, NSRoundLineCapStyle,
+	NSSlider,
 )
 
 try:
@@ -1168,6 +1169,8 @@ class PresenterView(NSView):
 		if annotation in movies:
 			player_item, _ = movies[annotation]
 			player.replaceCurrentItemWithPlayerItem_(player_item)
+			player.addPeriodicTimeObserverForInterval_queue_usingBlock_(
+				(1, 15, 1, 0), None, player_callback) # 1/15 s
 			presentation_show(movie_view)
 			player.play()
 			return
@@ -1264,13 +1267,36 @@ class MovieView(NSView):
 		NSView.setHidden_(self, hidden)
 		if self.isHidden():
 			player.pause()
+
+	def slide_(self, slider):
+		assert type(slider) == NSSlider
+		player.pause()
+		p = slider.floatValue()
+		(t, st, _, _) = player.currentTime()
+		(d, sd, _, _) = player.currentItem().duration()
+		t = int(p*(1.*d/sd)*st)
+		player.seekToTime_((t, st, 1, 0))
+
+
 movie_view = create_view(MovieView, frame=frame)
 movie_view.setWantsLayer_(True)
 player_layer = AVPlayerLayer.playerLayerWithPlayer_(player)
 player_layer.setFrame_(movie_view.bounds())
 movie_view.setLayer_(player_layer)
 
+slider = NSSlider.alloc().initWithFrame_(((0, 5), (frame.size.width, 10)))
+slider.setTarget_(movie_view)
+slider.setAction_("slide:")
+
 add_subview(presentation_view, movie_view)
+add_subview(movie_view, slider, NSViewWidthSizable)
+
+def player_callback(t):
+	(t, st, _, _) = player.currentTime()
+	(d, sd, _, _) = player.currentItem().duration()
+	p = (1.*t/st) / (1.*d/sd)
+	slider.setFloatValue_(p)
+
 
 # message view
 
