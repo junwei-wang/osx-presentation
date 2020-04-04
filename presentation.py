@@ -243,6 +243,7 @@ from WebKit import (
 from AVFoundation import (
 	AVAsset, AVPlayerItem,
 	AVPlayer, AVPlayerLayer,
+	AVAssetImageGenerator,
 )
 
 try:
@@ -443,8 +444,9 @@ def get_movie(url):
 	if not (mimetype and any(mimetype.startswith(t) for t in ["video", "audio", "image/gif"])):
 		return
 
+	asset = AVAsset.assetWithURL_(url)
 	player_item = AVPlayerItem.playerItemWithAsset_automaticallyLoadedAssetKeys_(
-		AVAsset.assetWithURL_(url),
+		asset,
 		["playable",],
 	)
 	player_item.addObserver_forKeyPath_options_context_(
@@ -460,7 +462,12 @@ def get_movie(url):
 	if not item_observer.playable:
 		return
 	
-	return player_item
+	image_generator = AVAssetImageGenerator.assetImageGeneratorWithAsset_(asset)
+	image_ref = image_generator.copyCGImageAtTime_actualTime_error_(
+		(0, 1, 1, 0), None, None,
+	)
+	poster = NSImage.alloc().initWithCGImage_size_(image_ref, (0, 0))
+	return player_item, poster
 
 
 def annotations(page):
@@ -478,8 +485,7 @@ for page_number in range(page_count):
 		elif annotation_type == PDFAnnotationLink:
 			movie = get_movie(annotation.URL())
 			if movie:
-#				movies[annotation] = (movie, movie.posterImage())
-				movies[annotation] = (movie, None)
+				movies[annotation] = movie
 
 
 # beamer notes
