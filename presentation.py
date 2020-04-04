@@ -1207,6 +1207,7 @@ def create_window(title, Window=NSWindow):
 	window.setTitle_(title)
 	window.makeKeyAndOrderFront_(nil)
 	window.setBackgroundColor_(NSColor.blackColor())
+	window.setAcceptsMouseMovedEvents_(True)
 	return window
 
 def create_view(View, frame=None, window=None):
@@ -1227,7 +1228,12 @@ def add_subview(view, subview, autoresizing_mask=NSViewWidthSizable|NSViewHeight
 
 # presentation window ########################################################
 
-presentation_window = create_window(file_name)
+# work around fragile presentation_window.makeFirstResponder_(presenter_view)
+class Window(NSWindow):
+	def keyDown_(self, event):
+		return presenter_window.sendEvent_(event)
+
+presentation_window = create_window(file_name, Window=Window)
 presentation_view   = presentation_window.contentView()
 frame = presentation_view.frame()
 
@@ -1349,7 +1355,6 @@ presentation_show()
 # presenter window ###########################################################
 
 presenter_window = create_window(file_name)
-presenter_window.setAcceptsMouseMovedEvents_(True)
 presenter_view   = create_view(PresenterView, window=presenter_window)
 
 presenter_window.center()
