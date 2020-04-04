@@ -1290,7 +1290,8 @@ class MovieView(NSView):
 		(t, st, _, _) = player.currentTime()
 		(d, sd, _, _) = player.currentItem().duration()
 		t = int(p*(1.*d/sd)*st)
-		player.seekToTime_((t, st, 1, 0))
+		player.seekToTime_toleranceBefore_toleranceAfter_(
+			(t, st, 1, 0), (1, st, 1, 0), (1, st, 1, 0))
 		self.seekSlider_()
 	
 	def stepByCount_(self, count):
