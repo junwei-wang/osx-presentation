@@ -992,20 +992,16 @@ class PresenterView(NSView):
 				send('t')
 				return
 			
-			playing = player.rate() > 0.
-			if playing:
-				player.pause()
+			if movie_view.isPlaying():
+				movie_view.pause()
 			else:
-				player.play()
+				movie_view.play()
 		
 		elif c in "<>": # movie navigation
 			if movie_view.isHidden():
 				return
-			player.pause()
-			if c == '<':
-				player.currentItem().stepByCount_(-1)
-			else:
-				player.currentItem().stepByCount_(1)
+			movie_view.pause()
+			movie_view.stepByCount_(1 if c == '>' else -1)
 		
 		elif c == 't': # toggle clock/timer
 			self.absolute_time = not self.absolute_time
@@ -1168,11 +1164,8 @@ class PresenterView(NSView):
 		
 		if annotation in movies:
 			player_item, _ = movies[annotation]
-			player.replaceCurrentItemWithPlayerItem_(player_item)
-			player.addPeriodicTimeObserverForInterval_queue_usingBlock_(
-				(1, 15, 1, 0), None, player_callback) # 1/15 s
 			presentation_show(movie_view)
-			player.play()
+			movie_view.playItem_(player_item)
 			return
 		
 		action = annotation.mouseUpAction()
@@ -1263,40 +1256,71 @@ add_subview(presentation_view, web_view)
 # movie view
 
 class MovieView(NSView):
+	def initWithFrame_(self, frame):
+		NSView.initWithFrame_(self, frame)
+		
+		self.setWantsLayer_(True)
+		player_layer = AVPlayerLayer.playerLayerWithPlayer_(player)
+		player_layer.setFrame_(frame)
+		self.setLayer_(player_layer)
+		
+		self.slider = NSSlider.alloc().initWithFrame_(((0, 5), (frame.size.width, 10)))
+		self.slider.setTarget_(self)
+		self.slider.setAction_("slide:")
+		add_subview(self, self.slider, NSViewWidthSizable)
+
+		return self
+	
 	def setHidden_(self, hidden):
 		NSView.setHidden_(self, hidden)
 		if self.isHidden():
-			player.pause()
+			self.pause()
 
 	def slide_(self, slider):
 		assert type(slider) == NSSlider
-		player.pause()
-		p = slider.floatValue()
+		assert slider == self.slider
+		self.pause()
+		p = self.slider.floatValue()
 		(t, st, _, _) = player.currentTime()
 		(d, sd, _, _) = player.currentItem().duration()
 		t = int(p*(1.*d/sd)*st)
 		player.seekToTime_((t, st, 1, 0))
+		self.seekSlider_()
+	
+	def stepByCount_(self, count):
+		player.currentItem().stepByCount_(count)
+		self.seekSlider_()
+	
+	def seekSlider_(self, timer=None):
+		(t, st, _, _) = player.currentTime()
+		(d, sd, _, _) = player.currentItem().duration()
+		p = (1.*t/st) / (1.*d/sd)
+		self.slider.setFloatValue_(p)
+	
+	def play(self):
+		player.play()
+		self.timer = NSTimer.scheduledTimerWithTimeInterval_target_selector_userInfo_repeats_(
+			1./15,
+			self, "seekSlider:",
+			None, YES
+		)
+	
+	def playItem_(self, player_item):
+		player.replaceCurrentItemWithPlayerItem_(player_item)
+		self.play()
 
-
+	def pause(self):
+		try:
+			self.timer.invalidate()
+		except:
+			pass
+		player.pause()
+	
+	def isPlaying(self):
+		return player.rate() > 0.
+	
 movie_view = create_view(MovieView, frame=frame)
-movie_view.setWantsLayer_(True)
-player_layer = AVPlayerLayer.playerLayerWithPlayer_(player)
-player_layer.setFrame_(movie_view.bounds())
-movie_view.setLayer_(player_layer)
-
-slider = NSSlider.alloc().initWithFrame_(((0, 5), (frame.size.width, 10)))
-slider.setTarget_(movie_view)
-slider.setAction_("slide:")
-
 add_subview(presentation_view, movie_view)
-add_subview(movie_view, slider, NSViewWidthSizable)
-
-def player_callback(t):
-	(t, st, _, _) = player.currentTime()
-	(d, sd, _, _) = player.currentItem().duration()
-	p = (1.*t/st) / (1.*d/sd)
-	slider.setFloatValue_(p)
-
 
 # message view
 
