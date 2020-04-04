@@ -1276,7 +1276,7 @@ class MovieView(NSView):
 		player_layer.setFrame_(frame)
 		self.setLayer_(player_layer)
 		
-		self.slider = NSSlider.alloc().initWithFrame_(((0, 5), (frame.size.width, 10)))
+		self.slider = NSSlider.alloc().initWithFrame_(((0, 5), (frame.size.width, 15)))
 		self.slider.setTarget_(self)
 		self.slider.setAction_("slide:")
 		add_subview(self, self.slider, NSViewWidthSizable)
