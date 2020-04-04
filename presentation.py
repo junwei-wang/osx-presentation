@@ -1307,7 +1307,10 @@ class MovieView(NSView):
 	def seekSlider_(self, timer=None):
 		(t, st, _, _) = player.currentTime()
 		(d, sd, _, _) = player.currentItem().duration()
-		p = (1.*t/st) / (1.*d/sd)
+		try:
+			p = (1.*t/st) / (1.*d/sd)
+		except ZeroDivisionError:
+			return
 		self.slider.setFloatValue_(p)
 	
 	def play(self):
