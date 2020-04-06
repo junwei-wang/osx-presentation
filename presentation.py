@@ -5,7 +5,7 @@
 """
 A PDF presentation tool for Mac OS X
 
-Copyright (c) 2011--2018, IIHM/LIG - Renaud Blanch <http://iihm.imag.fr/blanch/>
+Copyright (c) 2011--2020, IIHM/LIG - Renaud Blanch <http://iihm.imag.fr/blanch/>
 Licence: GPLv3 or higher <http://www.gnu.org/licenses/gpl.html>
 """
 
@@ -32,10 +32,10 @@ if sys.version_info[0] == 3:
 # constants and helpers ######################################################
 
 NAME = "Présentation"
-MAJOR, MINOR = 1, 9
+MAJOR, MINOR = 2, 0
 VERSION = "%s.%s" % (MAJOR, MINOR)
 HOME = "http://iihm.imag.fr/blanch/software/osx-presentation/"
-COPYRIGHT = "Copyright © 2011-2019 Renaud Blanch"
+COPYRIGHT = "Copyright © 2011-2020 Renaud Blanch"
 CREDITS = """
 Home: <a href='%s'>osx-presentation</a> <br/>
 Source: <a href='https://bitbucket.org/rndblnch/osx-presentation/src/tip/presentation.py'>presentation.py</a> <br/>
@@ -428,22 +428,21 @@ class PlayerItemObserver(NSObject):
 		assert change["new"] != change["old"]
 		assert change["new"] == item.status()
 		item.removeObserver_forKeyPath_(self, "status")
-
+		
 		self.playable = item.status() == AVPlayerItemStatusReadyToPlay
 		app.stop_(self)
 		app.postEvent_atStart_(nop_event, True) # we are not in event thread
-
 item_observer = PlayerItemObserver.alloc().init()
 
 
 def get_movie(url):
-	"""return a QTMovie object from an url if possible/desirable"""
+	"""return a AVPlayerItem object from an url if possible/desirable"""
 	if not (url and url.scheme() == "file"):
 		return
 	mimetype, _ = mimetypes.guess_type(url.absoluteString())
 	if not (mimetype and any(mimetype.startswith(t) for t in ["video", "audio", "image/gif"])):
 		return
-
+	
 	asset = AVAsset.assetWithURL_(url)
 	player_item = AVPlayerItem.playerItemWithAsset_automaticallyLoadedAssetKeys_(
 		asset,
@@ -454,11 +453,10 @@ def get_movie(url):
 		NSKeyValueObservingOptionOld | NSKeyValueObservingOptionNew,
 		None,
 	)
-	
 	player.replaceCurrentItemWithPlayerItem_(player_item)
 	app.run()
 	restarted = True
-
+	
 	if not item_observer.playable:
 		return
 	
@@ -742,7 +740,7 @@ class PresenterView(NSView):
 			if i == current_page:
 				NSColor.yellowColor().setFill()
 				NSFrameRectWithWidth(((x, y), (w, h)), 2)
-
+			
 			page_number = NSString.stringWithString_("%s" % (i+1,))
 			attr = {
 				NSFontAttributeName:            NSFont.labelFontOfSize_(10),
@@ -845,8 +843,8 @@ class PresenterView(NSView):
 		note.drawInRect_withAttributes_(
 			((margin, font_size), (current_width, height-current_height-2.5*margin)),
 			{
- 				NSFontAttributeName:            NSFont.labelFontOfSize_(font_size*self.notes_scale),
-	 			NSForegroundColorAttributeName: NSColor.whiteColor(),
+				NSFontAttributeName:            NSFont.labelFontOfSize_(font_size*self.notes_scale),
+				NSForegroundColorAttributeName: NSColor.whiteColor(),
 			}
 		)
 		
@@ -862,10 +860,10 @@ class PresenterView(NSView):
 			]))
 			help_text.drawAtPoint_((2*margin+current_width, 0))
 		
-
+		
 		# thumbnails
 		self.draw_miniatures()
-
+		
 		# next page
 		if current_page < last_page:
 			page = pdf.pageAtIndex_(current_page+1)
@@ -1102,7 +1100,7 @@ class PresenterView(NSView):
 			else:
 				self.miniature_origin -= event.scrollingDeltaY()*MINIATURE_WIDTH
 		refresher.refresh([self])
-
+	
 	
 	def mouseDown_(self, event):
 		global state
@@ -1159,7 +1157,7 @@ class PresenterView(NSView):
 					break
 			goto_page(i)
 			return
-
+		
 		annotation = self.page.annotationAtPoint_(self.press_location)
 		if annotation is None:
 			next_page()
@@ -1280,14 +1278,14 @@ class MovieView(NSView):
 		self.slider.setTarget_(self)
 		self.slider.setAction_("slide:")
 		add_subview(self, self.slider, NSViewWidthSizable)
-
+		
 		return self
 	
 	def setHidden_(self, hidden):
 		NSView.setHidden_(self, hidden)
 		if self.isHidden():
 			self.pause()
-
+	
 	def slide_(self, slider):
 		assert type(slider) == NSSlider
 		assert slider == self.slider
@@ -1295,7 +1293,10 @@ class MovieView(NSView):
 		p = self.slider.floatValue()
 		(t, st, _, _) = player.currentTime()
 		(d, sd, _, _) = player.currentItem().duration()
-		t = int(p*(1.*d/sd)*st)
+		try:
+			t = int(p*(1.*d/sd)*st)
+		except ZeroDivisionError:
+			return
 		player.seekToTime_toleranceBefore_toleranceAfter_(
 			(t, st, 1, 0), (1, st, 1, 0), (1, st, 1, 0))
 		self.seekSlider_()
@@ -1324,7 +1325,7 @@ class MovieView(NSView):
 	def playItem_(self, player_item):
 		player.replaceCurrentItemWithPlayerItem_(player_item)
 		self.play()
-
+	
 	def pause(self):
 		try:
 			self.timer.invalidate()
@@ -1334,7 +1335,7 @@ class MovieView(NSView):
 	
 	def isPlaying(self):
 		return player.rate() > 0.
-	
+
 movie_view = create_view(MovieView, frame=frame)
 add_subview(presentation_view, movie_view)
 
