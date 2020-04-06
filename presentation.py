@@ -1425,6 +1425,11 @@ def setup_menu(delegate):
 	application_menu.addItem_(NSMenuItem.separatorItem())
 	add_item(application_menu, ["Quit", NAME], "terminate:", 'q')
 	main_menu.setSubmenu_forItem_(application_menu, application_menuitem)
+
+	view_menuitem = main_menu.addItemWithTitle_action_keyEquivalent_("View", None, ' ')
+	view_menu = NSMenu.alloc().initWithTitle_("View")
+	add_item(view_menu, ["Enter Full Screen"], "fullScreen:", 'f', NSCommandKeyMask | NSControlKeyMask, target=delegate)
+	main_menu.setSubmenu_forItem_(view_menu, view_menuitem)
 	
 	app.setMainMenu_(main_menu)
 	
@@ -1531,6 +1536,9 @@ class ApplicationDelegate(NSObject):
 		recent_files[url.path()] = current_page
 		user_defaults.setObject_forKey_(recent_files, RECENT_FILES)
 		presentation_show()
+	
+	def fullScreen_(self, sender):
+		toggle_fullscreen(fullscreen=True)
 
 application_delegate = ApplicationDelegate.alloc().init()
 app.setDelegate_(application_delegate)
