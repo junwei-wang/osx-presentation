@@ -443,6 +443,7 @@ def get_movie(url):
 	if not (mimetype and any(mimetype.startswith(t) for t in ["video", "audio", "image/gif"])):
 		return
 	
+	global restarted
 	asset = AVAsset.assetWithURL_(url)
 	player_item = AVPlayerItem.playerItemWithAsset_automaticallyLoadedAssetKeys_(
 		asset,
