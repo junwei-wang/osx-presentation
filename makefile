@@ -37,8 +37,8 @@ $(app): $(script) $(icon)
 			<key>CFBundleTypeRole</key><string>Viewer</string> \
 			<key>LSHandlerRank</key><string>Alternate</string> \
 		</dict></array> \
-		<key>CFBundleShortVersionString</key><string>$(VERSION).0</string> \
-		<key>NSHumanReadableCopyright</key><string>Copyright © 2011-2017 Renaud Blanch</string> \
+		<key>CFBundleShortVersionString</key><string>$(VERSION)</string> \
+		<key>NSHumanReadableCopyright</key><string>Copyright © 2011-2020 Renaud Blanch</string> \
 		<key>CFBundleIconFile</key><string>presentation</string> \
 	</dict> \
 	</plist>" > $@/Contents/Info.plist

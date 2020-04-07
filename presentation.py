@@ -32,8 +32,8 @@ if sys.version_info[0] == 3:
 # constants and helpers ######################################################
 
 NAME = "Présentation"
-MAJOR, MINOR = 2, 0
-VERSION = "%s.%s" % (MAJOR, MINOR)
+MAJOR, MINOR, PATCH = 2, 0, 1
+VERSION = "%s.%s.%s" % (MAJOR, MINOR, PATCH)
 HOME = "http://iihm.imag.fr/blanch/software/osx-presentation/"
 COPYRIGHT = "Copyright © 2011-2020 Renaud Blanch"
 CREDITS = """
