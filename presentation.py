@@ -1005,7 +1005,6 @@ class PresenterView(NSView):
 		elif c in "<>": # movie navigation
 			if movie_view.isHidden():
 				return
-			movie_view.pause()
 			movie_view.stepByCount_(1 if c == '>' else -1)
 		
 		elif c == 't': # toggle clock/timer
@@ -1282,16 +1281,21 @@ class MovieView(NSView):
 		
 		return self
 	
+	def mouseDown_(self, event):
+		if self.isPlaying():
+			self.pause()
+		else:
+			self.play()
+	
 	def setHidden_(self, hidden):
 		NSView.setHidden_(self, hidden)
 		if self.isHidden():
 			self.pause()
 	
 	def slide_(self, slider):
-		assert type(slider) == NSSlider
-		assert slider == self.slider
-		self.pause()
-		p = self.slider.floatValue()
+		self._pause()
+		
+		p = slider.doubleValue()
 		(t, st, _, _) = player.currentTime()
 		(d, sd, _, _) = player.currentItem().duration()
 		try:
@@ -1300,26 +1304,28 @@ class MovieView(NSView):
 			return
 		player.seekToTime_toleranceBefore_toleranceAfter_(
 			(t, st, 1, 0), (1, st, 1, 0), (1, st, 1, 0))
-		self.seekSlider_()
+		self.seekSlider_(None)
 	
 	def stepByCount_(self, count):
+		self._pause()
 		player.currentItem().stepByCount_(count)
-		self.seekSlider_()
+		self.seekSlider_(None)
 	
-	def seekSlider_(self, timer=None):
+	def seekSlider_(self, timer):
 		(t, st, _, _) = player.currentTime()
 		(d, sd, _, _) = player.currentItem().duration()
 		try:
 			p = (1.*t/st) / (1.*d/sd)
 		except ZeroDivisionError:
 			return
-		self.slider.setFloatValue_(p)
+		self.slider.setDoubleValue_(p)
+		return p
 	
 	def play(self):
 		player.play()
 		self.timer = NSTimer.scheduledTimerWithTimeInterval_target_selector_userInfo_repeats_(
 			1./15,
-			self, "seekSlider:",
+			self, self.seekSlider_,
 			None, YES
 		)
 	
@@ -1327,12 +1333,16 @@ class MovieView(NSView):
 		player.replaceCurrentItemWithPlayerItem_(player_item)
 		self.play()
 	
-	def pause(self):
+	def _pause(self):
+		player.pause()
 		try:
 			self.timer.invalidate()
 		except:
 			pass
-		player.pause()
+
+	def pause(self):
+		self._pause()
+		self.seekSlider_(None)
 	
 	def isPlaying(self):
 		return player.rate() > 0.
@@ -1541,17 +1551,127 @@ class ApplicationDelegate(NSObject):
 	def fullScreen_(self, sender):
 		toggle_fullscreen(fullscreen=True)
 
+
+# touchbar ##################################################################
+
+def setup_touchbar():
+	# black magic to patch ApplicationDelegate and MovieView to support TouchBar
+	
+	try:
+		from AppKit import (
+			NSTouchBar, NSCustomTouchBarItem, NSButton,
+			NSScrubber, NSScrubberFlowLayout,
+			NSSliderTouchBarItem,
+			NSScrubberImageItemView, NSScrubberTextItemView,
+			NSLayoutConstraint,
+		)
+	except:
+		return
+
+	try:
+		from AppKit import (
+			NSImageNameTouchBarPlayTemplate, NSImageNameTouchBarPauseTemplate,
+			NSImageNameGoLeftTemplate, NSImageNameGoRightTemplate,
+		)
+	except:
+		NSImageNameTouchBarPlayTemplate = "NSTouchBarPlayTemplate"
+		NSImageNameTouchBarPauseTemplate = "NSTouchBarPauseTemplate"
+		NSImageNameGoLeftTemplate = "NSGoLeftTemplate"
+		NSImageNameGoRightTemplate = "NSGoRightTemplate"
+	
+	ImagePlay  = NSImage.imageNamed_(NSImageNameTouchBarPlayTemplate)
+	ImagePause = NSImage.imageNamed_(NSImageNameTouchBarPauseTemplate)
+	ImageLeft  = NSImage.imageNamed_(NSImageNameGoLeftTemplate)
+	ImageRight = NSImage.imageNamed_(NSImageNameGoRightTemplate)
+
+	from objc import protocolNamed, classAddMethod
+				
+	global ApplicationDelegate
+	NSTouchBarProvider = protocolNamed('NSTouchBarProvider')
+	class TouchBarDelegate(ApplicationDelegate, NSTouchBarProvider):
+		def applicationDidFinishLaunching_(self, notification):
+			super(TouchBarDelegate, self).applicationDidFinishLaunching_(notification)
+			app.setAutomaticCustomizeTouchBarMenuItemEnabled_(True)
+		
+		def press_(self, button):
+			if button.title() == u"?":
+				presenter_view.show_help = not presenter_view.show_help
+			elif button.title() == u">":
+				next_page()
+			elif button.title() == u"<":
+				prev_page()
+			refresher.refresh()
+		
+		def touchBar(self):
+			self.touchbar = touchbar = NSTouchBar.alloc().init()
+			touchbar.setDelegate_(self)
+			items = [u"<", u">"]
+			if not movie_view.isHidden():
+				items += [u"play", u"p"]
+				seekSlider_(movie_view, None)
+			items += [u"?"]
+			touchbar.setDefaultItemIdentifiers_(items)
+			return touchbar
+		
+		def touchBar_makeItemForIdentifier_(self, touchbar, i):
+			if i in u"?<>":
+				item = NSCustomTouchBarItem.alloc().initWithIdentifier_(i)
+				button = NSButton.buttonWithTitle_target_action_(
+					i, self, "press:")
+				button.setImage_({
+					u">": ImageRight,
+					u"<": ImageLeft,
+					u"?": None,
+				}[i])
+				item.setView_(button)
+			elif i == u"play":
+				item = NSCustomTouchBarItem.alloc().initWithIdentifier_(i)
+				button = NSButton.buttonWithImage_target_action_(
+					ImagePlay, movie_view, "play")
+				item.setView_(button)
+			elif i == u"p":
+				item = NSSliderTouchBarItem.alloc().initWithIdentifier_(i)
+				item.setTarget_(movie_view)
+				item.setAction_("slide:")
+			else:
+				return
+			item.setCustomizationLabel_(i)
+			return item
+	ApplicationDelegate = TouchBarDelegate
+
+	movie_view_seekSlider_ = movie_view.seekSlider_
+	def seekSlider_(self, timer):
+		p = movie_view_seekSlider_(timer)
+		application_delegate.touchbar.itemForIdentifier_(u"p").setDoubleValue_(p)
+		play = application_delegate.touchbar.itemForIdentifier_(u"play").view()
+		if self.isPlaying():
+			if play.action() == "play":
+				play.setImage_(ImagePause)
+				play.setAction_("pause")
+		else:
+			if play.action() == "pause":
+				play.setImage_(ImagePlay)
+				play.setAction_("play")
+	classAddMethod(MovieView, "seekSlider_", seekSlider_)
+
+	movie_view_setHidden_ = movie_view.setHidden_
+	def setHidden_(self, hidden):
+		movie_view_setHidden_(hidden)
+		app.setTouchBar_(None) # invalidate touchbar
+	classAddMethod(MovieView, "setHidden_", setHidden_)
+
+setup_touchbar()
+
+
+# main loop ##################################################################
+
 application_delegate = ApplicationDelegate.alloc().init()
 app.setDelegate_(application_delegate)
-
 
 # HACK: ensure ApplicationDelegate.applicationDidFinishLaunching_ is called
 if restarted:
 	NSNotificationCenter.defaultCenter().postNotificationName_object_(
 		NSApplicationDidFinishLaunchingNotification, app)
-
-
-# main loop ##################################################################
 
 class Refresher(NSObject):
 	def refresh_(self, timer=None):
@@ -1567,7 +1687,6 @@ class Refresher(NSObject):
 			view.setNeedsDisplay_(True)
 			for subview in view.subviews():
 				views.append(subview)
-
 refresher = Refresher.alloc().init()
 
 refresher_timer = NSTimer.scheduledTimerWithTimeInterval_target_selector_userInfo_repeats_(
