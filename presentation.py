@@ -1568,18 +1568,21 @@ def setup_touchbar():
 	try:
 		from AppKit import (
 			NSImageNameTouchBarPlayTemplate, NSImageNameTouchBarPauseTemplate,
-			NSImageNameGoLeftTemplate, NSImageNameGoRightTemplate,
+			NSImageNameTouchBarGoBackTemplate, NSImageNameTouchBarGoForwardTemplate,
+			NSImageNameTouchBarGoUpTemplate,
 		)
 	except:
 		NSImageNameTouchBarPlayTemplate = "NSTouchBarPlayTemplate"
 		NSImageNameTouchBarPauseTemplate = "NSTouchBarPauseTemplate"
-		NSImageNameGoLeftTemplate = "NSGoLeftTemplate"
-		NSImageNameGoRightTemplate = "NSGoRightTemplate"
+		NSImageNameTouchBarGoBackTemplate = "NSTouchBarGoBackTemplate"
+		NSImageNameTouchBarGoForwardTemplate = "NSTouchBarGoForwardTemplate"
+		NSImageNameTouchBarGoUpTemplate = "NSTouchBarGoUpTemplate"
 	
 	ImagePlay  = NSImage.imageNamed_(NSImageNameTouchBarPlayTemplate)
 	ImagePause = NSImage.imageNamed_(NSImageNameTouchBarPauseTemplate)
-	ImageLeft  = NSImage.imageNamed_(NSImageNameGoLeftTemplate)
-	ImageRight = NSImage.imageNamed_(NSImageNameGoRightTemplate)
+	ImageLeft  = NSImage.imageNamed_(NSImageNameTouchBarGoBackTemplate)
+	ImageRight = NSImage.imageNamed_(NSImageNameTouchBarGoForwardTemplate)
+	ImageUp    = NSImage.imageNamed_(NSImageNameTouchBarGoUpTemplate)
 
 	from objc import protocolNamed, classAddMethod
 	
@@ -1597,6 +1600,8 @@ def setup_touchbar():
 				next_page()
 			elif button.title() == u"<":
 				prev_page()
+			elif button.title() == u"u":
+				presentation_show(slide_view)
 			refresher.refresh()
 		
 		def touchBar(self):
@@ -1604,20 +1609,21 @@ def setup_touchbar():
 			touchbar.setDelegate_(self)
 			items = [u"<", u">"]
 			if not movie_view.isHidden():
-				items += [u"play", u"p"]
+				items += [u"play", u"p", u"u"]
 				seekSlider_(movie_view, None)
 			items += [u"?"]
 			touchbar.setDefaultItemIdentifiers_(items)
 			return touchbar
 		
 		def touchBar_makeItemForIdentifier_(self, touchbar, i):
-			if i in u"?<>":
+			if i in u"?<>u":
 				item = NSCustomTouchBarItem.alloc().initWithIdentifier_(i)
 				button = NSButton.buttonWithTitle_target_action_(
 					i, self, "press:")
 				button.setImage_({
 					u">": ImageRight,
 					u"<": ImageLeft,
+					u"u": ImageUp,
 					u"?": None,
 				}[i])
 				item.setView_(button)
