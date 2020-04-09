@@ -1317,7 +1317,7 @@ class MovieView(NSView):
 		try:
 			p = (1.*t/st) / (1.*d/sd)
 		except ZeroDivisionError:
-			return
+			return 0.
 		self.slider.setDoubleValue_(p)
 		return p
 	
