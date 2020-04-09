@@ -1,7 +1,10 @@
 # variables ##################################################################
 
-DMG_PATH = dmg
-VERSION = $(lastword $(shell ./presentation.py --version))
+DIST_PATH = release
+
+version = $(shell ./presentation.py --version)
+VERSION = $(lastword $(version))
+IDENTIFIER = $(word 2,$(version))
 
 
 # targets ####################################################################
@@ -10,17 +13,17 @@ script  := presentation.py
 icon    := presentation.icns
 iconset := presentation.iconset
 app     := Présentation.app
-dist    := osx-presentation-$(VERSION).dmg
+dist    := osx-presentation-$(VERSION).pkg
 src     := osx-presentation-$(VERSION).tbz
 
 
 # rules ######################################################################
 
-.PHONY: all clean dmg archive
+.PHONY: all clean pkg archive
 
 all: $(app)
 
-$(app): $(script) $(icon)
+$(app): $(script) $(icon) makefile
 	mkdir -p $@/Contents/
 	echo "APPL????" > $@/Contents/PkgInfo
 	echo "\
@@ -29,6 +32,7 @@ $(app): $(script) $(icon)
 	<plist version='1.0'> \
 	<dict> \
 		<key>CFBundleExecutable</key><string>$<</string> \
+		<key>CFBundleIdentifier</key><string>$(IDENTIFIER)</string> \
 		<key>CFBundleDocumentTypes</key><array><dict> \
 			<key>CFBundleTypeName</key><string>Adobe PDF document</string> \
 			<key>LSItemContentTypes</key><array> \
@@ -61,15 +65,13 @@ $(iconset): $(script)
 archive:
 	hg archive -r $(VERSION) -t tbz2 $@
 
-dmg: $(app) $(dist)
+pkg: $(app) $(dist)
 
 $(dist): $(app)
-	mkdir $(DMG_PATH)
-	ln -s /Applications $(DMG_PATH)/
-	cp -r $^ $(DMG_PATH)
-	hdiutil create -ov -srcfolder $(DMG_PATH) -volname $(basename $@) $@
-	hdiutil internet-enable -yes $@
-	rm -rf $(DMG_PATH)
+	mkdir $(DIST_PATH)
+	cp -r $^ $(DIST_PATH)
+	pkgbuild --root $(DIST_PATH) --identifier $(IDENTIFIER) --version $(VERSION) --install-location /Applications $@
+	rm -rf $(DIST_PATH)
 
 
 clean:

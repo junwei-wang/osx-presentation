@@ -32,7 +32,8 @@ if sys.version_info[0] == 3:
 # constants and helpers ######################################################
 
 NAME = "Présentation"
-MAJOR, MINOR, PATCH = 2, 0, 1
+ID = "fr.imag.iihm.blanch.osx-presentation"
+MAJOR, MINOR, PATCH = 2, 0, 2
 VERSION = "%s.%s.%s" % (MAJOR, MINOR, PATCH)
 HOME = "http://iihm.imag.fr/blanch/software/osx-presentation/"
 COPYRIGHT = "Copyright © 2011-2020 Renaud Blanch"
@@ -123,7 +124,7 @@ def exit_relaunch(path, page):
 	os.execv(__file__, [__file__, '--page', str(page), path])
 
 def exit_version():
-	sys.stdout.write(("%s %s\n" % (os.path.basename(name), VERSION)).encode())
+	sys.stdout.write(("%s %s %s\n" % (os.path.basename(name), ID, VERSION)).encode())
 	sys.exit()
 
 def exit_icon():
@@ -273,7 +274,6 @@ info = bundle.localizedInfoDictionary() or bundle.infoDictionary()
 info['CFBundleName'] = _s(NAME)
 info['NSAppTransportSecurity'] = {'NSAllowsArbitraryLoads': YES}
 
-ID = "fr.imag.iihm.blanch.osx-presentation"
 NO_NOTIFY    = '.'.join([ID, 'no_notify'])
 RECENT_FILES = '.'.join([ID, 'recent_files'])
 user_defaults = NSUserDefaults.standardUserDefaults()
