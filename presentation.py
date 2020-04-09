@@ -1560,10 +1560,7 @@ def setup_touchbar():
 	try:
 		from AppKit import (
 			NSTouchBar, NSCustomTouchBarItem, NSButton,
-			NSScrubber, NSScrubberFlowLayout,
 			NSSliderTouchBarItem,
-			NSScrubberImageItemView, NSScrubberTextItemView,
-			NSLayoutConstraint,
 		)
 	except:
 		return
@@ -1585,7 +1582,7 @@ def setup_touchbar():
 	ImageRight = NSImage.imageNamed_(NSImageNameGoRightTemplate)
 
 	from objc import protocolNamed, classAddMethod
-				
+	
 	global ApplicationDelegate
 	NSTouchBarProvider = protocolNamed('NSTouchBarProvider')
 	class TouchBarDelegate(ApplicationDelegate, NSTouchBarProvider):
