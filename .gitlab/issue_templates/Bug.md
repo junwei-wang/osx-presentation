@@ -1,6 +1,6 @@
 # Bug report
 
-Concerned version:
+Versions:
 
-- [] Mac OS X version:
-- [] Présentation.app version:
+- [ ] Mac OS X:
+- [ ] Présentation.app:
