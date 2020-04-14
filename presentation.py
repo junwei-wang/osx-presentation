@@ -77,6 +77,7 @@ HELP = [
 	("+/-/0",     "zoom in/out/reset speaker notes or web view"),
 	("space",     "play/pause video (while in movie mode)"),
 	("&lt;/&gt;", "step video backward/forward"),
+	("c/C",       "reduce/augment cursor size"),
 	("e",         "erase on-screen annotations"),
 ]
 
@@ -277,6 +278,7 @@ ICON = NSImage.alloc().initWithData_(NSData.dataWithBytes_length_(ICON, len(ICON
 arrow = NSCursor.arrowCursor()
 CURSOR = arrow.image()
 X_hot, Y_hot = arrow.hotSpot()
+cursor_scale = 1.
 
 
 restarted = False # has the application been restarted before actual launch
@@ -616,7 +618,7 @@ class SlideView(NSView):
 		if self.show_cursor:
 			cursor_bounds = NSRect()
 			W, H = CURSOR.size()
-			iw, ih = transform.transformSize_((1., 1.))
+			iw, ih = transform.transformSize_((1./cursor_scale, 1./cursor_scale))
 			cursor_bounds.size = (W/iw, H/ih)
 			x, y = cursor_location
 			cursor_bounds.origin = x-X_hot/iw, y-(H-Y_hot)/ih
@@ -1051,6 +1053,13 @@ class PresenterView(NSView):
 					scale = clip.convertSize_fromView_((1., 1.), None)
 				clip.scaleUnitSquareToSize_(scale)
 				document.setNeedsLayout_(True)
+		
+		elif c in "cC":
+			global cursor_scale
+			if c == 'c':
+				cursor_scale /= 1.5
+			else:
+				cursor_scale *= 1.5
 		
 		elif c == 'e': # erase annotation
 			del drawings[current_page]
