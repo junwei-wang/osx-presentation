@@ -77,7 +77,8 @@ HELP = [
 	("+/-/0",     "zoom in/out/reset speaker notes or web view"),
 	("space",     "play/pause video (while in movie mode)"),
 	("&lt;/&gt;", "step video backward/forward"),
-	("c/C",       "reduce/augment cursor size"),
+	("c/C",       "reduce/augment cursor/spotlight size"),
+	("l",         "toggle spotlight"),
 	("e",         "erase on-screen annotations"),
 ]
 
@@ -217,7 +218,7 @@ from AppKit import (
 	NSPrevFunctionKey, NSNextFunctionKey,
 	NSF5FunctionKey,
 	NSScreen, NSWorkspace, NSImage,
-	NSBezierPath, NSRoundLineCapStyle,
+	NSBezierPath, NSRoundLineCapStyle, NSEvenOddWindingRule,
 	NSSlider,
 )
 
@@ -278,7 +279,6 @@ ICON = NSImage.alloc().initWithData_(NSData.dataWithBytes_length_(ICON, len(ICON
 arrow = NSCursor.arrowCursor()
 CURSOR = arrow.image()
 X_hot, Y_hot = arrow.hotSpot()
-cursor_scale = 1.
 
 
 restarted = False # has the application been restarted before actual launch
@@ -592,7 +592,9 @@ def draw_page(page):
 # presentation ###############################################################
 
 class SlideView(NSView):
+	cursor_scale = 1.
 	show_cursor = False
+	show_spotlight = False
 	hide_timer = None
 	
 	def drawRect_(self, rect):
@@ -615,12 +617,20 @@ class SlideView(NSView):
 		transform.concat()
 		draw_page(page)
 		
-		if self.show_cursor:
+		x, y = cursor_location
+		if self.show_spotlight:
+			spotlight = NSBezierPath.bezierPathWithRect_(bounds)
+			r = 10.*self.cursor_scale
+			spotlight.appendBezierPathWithOvalInRect_(((x-r, y-r), (2*r, 2*r)))
+			spotlight.setWindingRule_(NSEvenOddWindingRule)
+			NSColor.darkGrayColor().colorWithAlphaComponent_(.5).setFill()
+			NSColor.blackColor().colorWithAlphaComponent_(.5).setFill()
+			spotlight.fill()
+		elif self.show_cursor:
 			cursor_bounds = NSRect()
 			W, H = CURSOR.size()
-			iw, ih = transform.transformSize_((1./cursor_scale, 1./cursor_scale))
+			iw, ih = transform.transformSize_((1./self.cursor_scale, 1./self.cursor_scale))
 			cursor_bounds.size = (W/iw, H/ih)
-			x, y = cursor_location
 			cursor_bounds.origin = x-X_hot/iw, y-(H-Y_hot)/ih
 			CURSOR.drawInRect_fromRect_operation_fraction_(
 				cursor_bounds, NSZeroRect, NSCompositeSourceAtop, 1.
@@ -1055,11 +1065,14 @@ class PresenterView(NSView):
 				document.setNeedsLayout_(True)
 		
 		elif c in "cC":
-			global cursor_scale
 			if c == 'c':
-				cursor_scale /= 1.5
+				slide_view.cursor_scale /= 1.5
 			else:
-				cursor_scale *= 1.5
+				slide_view.cursor_scale *= 1.5
+		
+		elif c == 'l':
+			slide_view.show_spotlight = not slide_view.show_spotlight
+			slide_view.showCursor()
 		
 		elif c == 'e': # erase annotation
 			del drawings[current_page]
