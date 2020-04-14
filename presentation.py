@@ -620,7 +620,7 @@ class SlideView(NSView):
 		x, y = cursor_location
 		if self.show_spotlight:
 			spotlight = NSBezierPath.bezierPathWithRect_(bounds)
-			r = 10.*self.cursor_scale
+			r = 20.*self.cursor_scale
 			spotlight.appendBezierPathWithOvalInRect_(((x-r, y-r), (2*r, 2*r)))
 			spotlight.setWindingRule_(NSEvenOddWindingRule)
 			NSColor.darkGrayColor().colorWithAlphaComponent_(.5).setFill()
