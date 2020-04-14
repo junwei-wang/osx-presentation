@@ -1628,11 +1628,12 @@ def setup_touchbar():
 		def touchBar(self):
 			self.touchbar = touchbar = NSTouchBar.alloc().init()
 			touchbar.setDelegate_(self)
-			items = [u"<", u">"]
+			items = [u"?", "NSTouchBarItemIdentifierFixedSpaceSmall", u"<", u">"]
+			if slide_view.isHidden():
+				items += ["NSTouchBarItemIdentifierFixedSpaceSmall", u"u"]
 			if not movie_view.isHidden():
-				items += [u"play", u"p", u"u"]
+				items += ["NSTouchBarItemIdentifierFixedSpaceSmall", u"play", u"p"]
 				seekSlider_(movie_view, None)
-			items += [u"?"]
 			touchbar.setDefaultItemIdentifiers_(items)
 			return touchbar
 		
