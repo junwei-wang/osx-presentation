@@ -653,6 +653,89 @@ class SlideView(NSView):
 		self.setNeedsDisplay_(True)
 
 
+class MovieView(NSView):
+	def initWithFrame_(self, frame):
+		NSView.initWithFrame_(self, frame)
+		
+		self.setWantsLayer_(True)
+		player_layer = AVPlayerLayer.playerLayerWithPlayer_(player)
+		player_layer.setFrame_(frame)
+		self.setLayer_(player_layer)
+		
+		self.slider = NSSlider.alloc().initWithFrame_(((0, 5), (frame.size.width, 15)))
+		self.slider.setTarget_(self)
+		self.slider.setAction_("slide:")
+		add_subview(self, self.slider, NSViewWidthSizable)
+		
+		return self
+	
+	def mouseDown_(self, event):
+		if self.isPlaying():
+			self.pause()
+		else:
+			self.play()
+	
+	def setHidden_(self, hidden):
+		NSView.setHidden_(self, hidden)
+		if self.isHidden():
+			self.pause()
+	
+	def slide_(self, slider):
+		self._pause()
+		
+		p = slider.doubleValue()
+		(t, st, _, _) = player.currentTime()
+		(d, sd, _, _) = player.currentItem().duration()
+		try:
+			t = int(p*(1.*d/sd)*st)
+		except ZeroDivisionError:
+			return
+		player.seekToTime_toleranceBefore_toleranceAfter_(
+			(t, st, 1, 0), (1, st, 1, 0), (1, st, 1, 0))
+		self.seekSlider_(None)
+	
+	def stepByCount_(self, count):
+		self._pause()
+		player.currentItem().stepByCount_(count)
+		self.seekSlider_(None)
+	
+	def seekSlider_(self, timer):
+		(t, st, _, _) = player.currentTime()
+		(d, sd, _, _) = player.currentItem().duration()
+		try:
+			p = (1.*t/st) / (1.*d/sd)
+		except ZeroDivisionError:
+			return 0.
+		self.slider.setDoubleValue_(p)
+		return p
+	
+	def play(self):
+		player.play()
+		self.timer = NSTimer.scheduledTimerWithTimeInterval_target_selector_userInfo_repeats_(
+			1./15,
+			self, self.seekSlider_,
+			None, YES
+		)
+	
+	def playItem_(self, player_item):
+		player.replaceCurrentItemWithPlayerItem_(player_item)
+		self.play()
+	
+	def _pause(self):
+		player.pause()
+		try:
+			self.timer.invalidate()
+		except:
+			pass
+
+	def pause(self):
+		self._pause()
+		self.seekSlider_(None)
+	
+	def isPlaying(self):
+		return player.rate() > 0.
+
+
 class MessageView(NSView):
 	fps = 20. # frame per seconds for animation
 	pps = 40. # pixels per seconds for scrolling
@@ -1286,88 +1369,6 @@ web_view.setFrameLoadDelegate_(web_frame_load_delegate)
 add_subview(presentation_view, web_view)
 
 # movie view
-
-class MovieView(NSView):
-	def initWithFrame_(self, frame):
-		NSView.initWithFrame_(self, frame)
-		
-		self.setWantsLayer_(True)
-		player_layer = AVPlayerLayer.playerLayerWithPlayer_(player)
-		player_layer.setFrame_(frame)
-		self.setLayer_(player_layer)
-		
-		self.slider = NSSlider.alloc().initWithFrame_(((0, 5), (frame.size.width, 15)))
-		self.slider.setTarget_(self)
-		self.slider.setAction_("slide:")
-		add_subview(self, self.slider, NSViewWidthSizable)
-		
-		return self
-	
-	def mouseDown_(self, event):
-		if self.isPlaying():
-			self.pause()
-		else:
-			self.play()
-	
-	def setHidden_(self, hidden):
-		NSView.setHidden_(self, hidden)
-		if self.isHidden():
-			self.pause()
-	
-	def slide_(self, slider):
-		self._pause()
-		
-		p = slider.doubleValue()
-		(t, st, _, _) = player.currentTime()
-		(d, sd, _, _) = player.currentItem().duration()
-		try:
-			t = int(p*(1.*d/sd)*st)
-		except ZeroDivisionError:
-			return
-		player.seekToTime_toleranceBefore_toleranceAfter_(
-			(t, st, 1, 0), (1, st, 1, 0), (1, st, 1, 0))
-		self.seekSlider_(None)
-	
-	def stepByCount_(self, count):
-		self._pause()
-		player.currentItem().stepByCount_(count)
-		self.seekSlider_(None)
-	
-	def seekSlider_(self, timer):
-		(t, st, _, _) = player.currentTime()
-		(d, sd, _, _) = player.currentItem().duration()
-		try:
-			p = (1.*t/st) / (1.*d/sd)
-		except ZeroDivisionError:
-			return 0.
-		self.slider.setDoubleValue_(p)
-		return p
-	
-	def play(self):
-		player.play()
-		self.timer = NSTimer.scheduledTimerWithTimeInterval_target_selector_userInfo_repeats_(
-			1./15,
-			self, self.seekSlider_,
-			None, YES
-		)
-	
-	def playItem_(self, player_item):
-		player.replaceCurrentItemWithPlayerItem_(player_item)
-		self.play()
-	
-	def _pause(self):
-		player.pause()
-		try:
-			self.timer.invalidate()
-		except:
-			pass
-
-	def pause(self):
-		self._pause()
-		self.seekSlider_(None)
-	
-	def isPlaying(self):
-		return player.rate() > 0.
 
 movie_view = create_view(MovieView, frame=frame)
 add_subview(presentation_view, movie_view)
