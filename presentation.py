@@ -739,6 +739,7 @@ class MovieView(NSView):
 
 
 class VideoView(NSView):
+	origin = 10, 10
 	def initWithFrame_(self, frame):
 		assert NSView.initWithFrame_(self, frame) == self
 		self.setWantsLayer_(True)
@@ -746,10 +747,12 @@ class VideoView(NSView):
 		self.preview = AVCaptureVideoPreviewLayer.layerWithSession_(self.session)
 		self.preview.setFrame_(frame)
 		self.setLayer_(self.preview)
+		self.setAlphaValue_(.85)
 		return self
 	
 	def setHidden_(self, hidden):
 		if hidden == False:
+			self.setFrameOrigin_(self.origin)
 			self.device = AVCaptureDevice.defaultDeviceWithMediaType_(AVMediaTypeVideo)
 			self.input = AVCaptureDeviceInput.deviceInputWithDevice_error_(self.device, None)
 			if self.session.canAddInput_(self.input):
@@ -1424,7 +1427,6 @@ def toggle_black_view(): toggle_view(black_view)
 def toggle_web_view():   toggle_view(web_view)
 def toggle_movie_view(): toggle_view(movie_view)
 def toggle_video_view():
-	video_view.setFrameOrigin_((10, 10))
 	if video_view.isHidden():
 		video_view.setHidden_(False)
 	else:
