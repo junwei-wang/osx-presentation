@@ -246,13 +246,17 @@ from AVFoundation import (
 	AVAsset, AVPlayerItem, AVPlayer, AVPlayerLayer,
 	AVAssetImageGenerator,
 	AVCaptureSession, AVCaptureDevice, AVCaptureDeviceInput,
-	AVCaptureVideoPreviewLayer, AVMediaTypeVideo,
+	AVCaptureVideoPreviewLayer,
 )
 
 try:
-	from AVFoundation import AVPlayerItemStatusReadyToPlay
+	from AVFoundation import (
+		AVPlayerItemStatusReadyToPlay,
+		AVMediaTypeVideo,
+	)
 except:
 	AVPlayerItemStatusReadyToPlay = 1
+	AVMediaTypeVideo = "vide"
 
 
 if sys.version_info[0] == 3:
