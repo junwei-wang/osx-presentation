@@ -62,6 +62,7 @@ HELP = [
 	("w",         "toggle web view"),
 	("m",         "toggle movie view"),
 	("s",         "show slide view"),
+	("v",         "show/hide video view"),
 	("f/F5/⎋",    "toggle/enter/leave fullscreen"),
 	("x",         "switch screens"),
 	("←|↑|⇞",     "previous page"),
@@ -198,7 +199,7 @@ from AppKit import (
 	NSOpenPanel, NSFileHandlingPanelOKButton,
 	NSAlert, NSAlertDefaultReturn, NSAlertAlternateReturn,
 	NSView,
-	NSViewWidthSizable, NSViewHeightSizable,
+	NSViewWidthSizable, NSViewHeightSizable, NSViewNotSizable,
 	NSWindow, NSColor,
 	NSMiniaturizableWindowMask, NSResizableWindowMask, NSTitledWindowMask,
 	NSBackingStoreBuffered,
@@ -242,9 +243,10 @@ from WebKit import (
 )
 
 from AVFoundation import (
-	AVAsset, AVPlayerItem,
-	AVPlayer, AVPlayerLayer,
+	AVAsset, AVPlayerItem, AVPlayer, AVPlayerLayer,
 	AVAssetImageGenerator,
+	AVCaptureSession, AVCaptureDevice, AVCaptureDeviceInput,
+	AVCaptureVideoPreviewLayer, AVMediaTypeVideo,
 )
 
 try:
@@ -655,7 +657,7 @@ class SlideView(NSView):
 
 class MovieView(NSView):
 	def initWithFrame_(self, frame):
-		NSView.initWithFrame_(self, frame)
+		assert NSView.initWithFrame_(self, frame) == self
 		
 		self.setWantsLayer_(True)
 		player_layer = AVPlayerLayer.playerLayerWithPlayer_(player)
@@ -734,6 +736,28 @@ class MovieView(NSView):
 	
 	def isPlaying(self):
 		return player.rate() > 0.
+
+
+class VideoView(NSView):
+	def initWithFrame_(self, frame):
+		assert NSView.initWithFrame_(self, frame) == self
+		self.setWantsLayer_(True)
+		self.session = AVCaptureSession.alloc().init()
+		self.preview = AVCaptureVideoPreviewLayer.layerWithSession_(self.session)
+		self.preview.setFrame_(frame)
+		self.setLayer_(self.preview)
+		return self
+	
+	def setHidden_(self, hidden):
+		if hidden == False:
+			self.device = AVCaptureDevice.defaultDeviceWithMediaType_(AVMediaTypeVideo)
+			self.input = AVCaptureDeviceInput.deviceInputWithDevice_error_(self.device, None)
+			if self.session.canAddInput_(self.input):
+				self.session.addInput_(self.input)
+				self.session.startRunning()
+		else:
+			self.session.stopRunning()
+		return super(VideoView, self).setHidden_(hidden)
 
 
 class MessageView(NSView):
@@ -1167,6 +1191,7 @@ class PresenterView(NSView):
 				'b':                     toggle_black_view,
 				'w':                     toggle_web_view,
 				'm':                     toggle_movie_view,
+				'v':                     toggle_video_view,
 				's':                     presentation_show,
 				NSLeftArrowFunctionKey:  prev_page,
 				NSUpArrowFunctionKey:    prev_page,
@@ -1373,6 +1398,11 @@ add_subview(presentation_view, web_view)
 movie_view = create_view(MovieView, frame=frame)
 add_subview(presentation_view, movie_view)
 
+# video view
+
+video_view = VideoView.alloc().initWithFrame_(((10, 10), (320, 200)))
+add_subview(presentation_view, video_view, NSViewNotSizable)
+
 # message view
 
 if show_feed:
@@ -1393,7 +1423,14 @@ def toggle_view(view):
 def toggle_black_view(): toggle_view(black_view)
 def toggle_web_view():   toggle_view(web_view)
 def toggle_movie_view(): toggle_view(movie_view)
+def toggle_video_view():
+	video_view.setFrameOrigin_((10, 10))
+	if video_view.isHidden():
+		video_view.setHidden_(False)
+	else:
+		video_view.setHidden_(True)
 
+toggle_video_view()
 presentation_show()
 
 
