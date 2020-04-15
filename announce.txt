@@ -1,4 +1,4 @@
-I am happy to announce the release of Présentation.app 2.0.
+I am happy to announce the release of Présentation.app 2.1.0.
 
 Présentation.app is a presentation tool for pdf slides (e.g. produced using LaTeX and the popular beamer class) for Mac OS X.
 You can download this release here: http://iihm.imag.fr/blanch/software/osx-presentation/releases/
@@ -29,6 +29,13 @@ https://foss.heptapod.net/macos-apps/osx-presentation
 
 
 Changes since 1.0
+
+2.1.0:
+  - added ability to change cursor size on presentation screen
+  - added spotlight mode for cursor on presentation screen
+  - added controls on touchbar for hardware supporting it
+  - switched to pkg distribution instead of dmg
+  - now using major.minor.patch_level version scheme
 
 2.0:
   - moved project from bitbucket to heptapod
