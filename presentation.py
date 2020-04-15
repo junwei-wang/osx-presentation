@@ -827,6 +827,10 @@ class MessageView(NSView):
 def hasModifiers(event, mask):
 	return (event.modifierFlags() & mask) == mask
 
+def transform_rect(transform, rect):
+	origin, size = rect
+	return (transform.transformPoint_(origin), transform.transformSize_(size))
+
 class PresenterView(NSView):
 	transform = NSAffineTransform.transform()
 	duration = presentation_duration * 60.
@@ -930,12 +934,8 @@ class PresenterView(NSView):
 		# video view proxy
 		if not video_view.isHidden():
 			NSColor.colorWithCalibratedWhite_alpha_(.25, .25).setFill()
-			origin, size = video_view.frame()
-			origin, size = (
-				slide_view.transform.transformPoint_(origin),
-				slide_view.transform.transformSize_(size)
-			)
-			NSRectFillUsingOperation((origin, size), NSCompositeSourceAtop)
+			rect = transform_rect(slide_view.transform, video_view.frame())
+			NSRectFillUsingOperation(rect, NSCompositeSourceAtop)
 
 		NSGraphicsContext.restoreGraphicsState()
 		NSRectFillUsingOperation(((0, 0), (margin, height)), NSCompositeClear)
@@ -1051,11 +1051,8 @@ class PresenterView(NSView):
 			if type(annotation) != PDFAnnotationLink:
 				continue
 			
-			origin, size = annotation.bounds()
-			rect = (self.transform.transformPoint_(origin),
-			        self.transform.transformSize_(size))
+			rect = transform_rect(self.transform, annotation.bounds())
 			self.addCursorRect_cursor_(rect, NSCursor.pointingHandCursor())
-			
 			self.addToolTipRect_owner_userData_(rect, self, i)
 	
 	
