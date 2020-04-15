@@ -556,7 +556,6 @@ def draw_page(page):
 	NSEraseRect(page.boundsForBox_(kPDFDisplayBoxCropBox))
 	page.drawWithBox_(kPDFDisplayBoxCropBox)
 	
-	NSColor.blackColor().setFill()
 	for annotation in annotations(page):
 		if not annotation in movies:
 			continue
