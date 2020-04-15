@@ -210,7 +210,7 @@ from AppKit import (
 	NSRectFillUsingOperation, NSFrameRectWithWidth, NSFrameRect, NSEraseRect,
 	NSRect, NSZeroRect,
 	NSColor, NSCursor, NSFont,
-	NSFontAttributeName,	NSForegroundColorAttributeName,
+	NSFontAttributeName, NSForegroundColorAttributeName,
 	NSStrokeColorAttributeName, NSStrokeWidthAttributeName,
 	NSUpArrowFunctionKey, NSLeftArrowFunctionKey,
 	NSDownArrowFunctionKey, NSRightArrowFunctionKey,
@@ -630,7 +630,7 @@ class SlideView(NSView):
 				r = 20.*self.cursor_scale
 				spotlight.appendBezierPathWithOvalInRect_(((x-r, y-r), (2*r, 2*r)))
 				spotlight.setWindingRule_(NSEvenOddWindingRule)
-				NSColor.blackColor().colorWithAlphaComponent_(.5).setFill()
+				NSColor.colorWithCalibratedWhite_alpha_(.0, .25).setFill()
 				spotlight.fill()
 		elif self.show_cursor:
 			cursor_bounds = NSRect()
@@ -642,6 +642,8 @@ class SlideView(NSView):
 				cursor_bounds, NSZeroRect, NSCompositeSourceAtop, 1.
 			)
 		
+		self.transform = transform
+		self.transform.invert()
 		NSGraphicsContext.restoreGraphicsState()
 	
 	def showCursor(self):
@@ -924,6 +926,17 @@ class PresenterView(NSView):
 		# screen border & cropping
 		NSColor.grayColor().setFill()
 		NSFrameRect(page_rect)
+
+		# video view proxy
+		if not video_view.isHidden():
+			NSColor.colorWithCalibratedWhite_alpha_(.25, .25).setFill()
+			origin, size = video_view.frame()
+			origin, size = (
+				slide_view.transform.transformPoint_(origin),
+				slide_view.transform.transformSize_(size)
+			)
+			NSRectFillUsingOperation((origin, size), NSCompositeSourceAtop)
+
 		NSGraphicsContext.restoreGraphicsState()
 		NSRectFillUsingOperation(((0, 0), (margin, height)), NSCompositeClear)
 		NSRectFillUsingOperation(((margin, height-1.5*margin), (width+MINIATURE_WIDTH-margin, 1.5*margin)), NSCompositeClear)
@@ -1407,7 +1420,7 @@ add_subview(presentation_view, movie_view)
 
 # video view
 
-video_view = VideoView.alloc().initWithFrame_(((10, 10), (320, 200)))
+video_view = VideoView.alloc().initWithFrame_(((10, 10), (320, 180)))
 add_subview(presentation_view, video_view, NSViewNotSizable)
 
 # message view
