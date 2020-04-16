@@ -747,6 +747,9 @@ class MovieView(NSView):
 
 class VideoView(NSView):
 	origin = 10, 10
+	TOP, BOTTOM = "V:|-[video(==180)]", "V:[video(==180)]-|"
+	LEFT, RIGHT = "H:|-[video(==320)]", "H:[video(==320)]-|"
+	
 	def initWithFrame_(self, frame):
 		assert NSView.initWithFrame_(self, frame) == self
 		self.setWantsLayer_(True)
@@ -771,6 +774,14 @@ class VideoView(NSView):
 	
 	def requiresConstraintBasedLayout(self):
 		return True
+	
+	def align_(self, positions):
+		self.removeConstraints_(self.constraints())
+		NSLayoutConstraint.activateConstraints_(sum(
+			(NSLayoutConstraint.constraintsWithVisualFormat_options_metrics_views_(
+				p, 0, None, {"video": self})
+			for p in positions), [])
+		)
 
 
 class MessageView(NSView):
@@ -1423,22 +1434,7 @@ add_subview(presentation_view, movie_view)
 
 video_view = VideoView.alloc().initWithFrame_(((0, 0), (320, 180)))
 add_subview(presentation_view, video_view)
-
-NSLayoutConstraint.activateConstraints_(
-NSLayoutConstraint.constraintsWithVisualFormat_options_metrics_views_(
-	"H:[video(==320)]-|",
-	0,
-	None,
-	{"video": video_view},
-))
-
-NSLayoutConstraint.activateConstraints_(
-NSLayoutConstraint.constraintsWithVisualFormat_options_metrics_views_(
-	"V:|-[video(==180)]",
-	0,
-	None,
-	{"video": video_view},
-))
+video_view.align_((VideoView.TOP, VideoView.RIGHT))
 
 # message view
 
