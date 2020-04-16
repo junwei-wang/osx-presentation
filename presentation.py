@@ -221,6 +221,7 @@ from AppKit import (
 	NSScreen, NSWorkspace, NSImage,
 	NSBezierPath, NSRoundLineCapStyle, NSEvenOddWindingRule,
 	NSSlider,
+	NSLayoutConstraint,
 )
 
 try:
@@ -753,11 +754,11 @@ class VideoView(NSView):
 		self.preview.setFrame_(frame)
 		self.setLayer_(self.preview)
 		self.setAlphaValue_(.85)
+		self.setTranslatesAutoresizingMaskIntoConstraints_(False)
 		return self
 	
 	def setHidden_(self, hidden):
 		if hidden == False:
-			self.setFrameOrigin_(self.origin)
 			self.device = AVCaptureDevice.defaultDeviceWithMediaType_(AVMediaTypeVideo)
 			self.input = AVCaptureDeviceInput.deviceInputWithDevice_error_(self.device, None)
 			if self.session.canAddInput_(self.input):
@@ -766,6 +767,9 @@ class VideoView(NSView):
 		else:
 			self.session.stopRunning()
 		return super(VideoView, self).setHidden_(hidden)
+	
+	def requiresConstraintBasedLayout(self):
+		return True
 
 
 class MessageView(NSView):
@@ -1416,8 +1420,24 @@ add_subview(presentation_view, movie_view)
 
 # video view
 
-video_view = VideoView.alloc().initWithFrame_(((10, 10), (320, 180)))
-add_subview(presentation_view, video_view, NSViewNotSizable)
+video_view = VideoView.alloc().initWithFrame_(((0, 0), (320, 180)))
+add_subview(presentation_view, video_view)
+
+NSLayoutConstraint.activateConstraints_(
+NSLayoutConstraint.constraintsWithVisualFormat_options_metrics_views_(
+	"H:[video(==320)]-|",
+	0,
+	None,
+	{"video": video_view},
+))
+
+NSLayoutConstraint.activateConstraints_(
+NSLayoutConstraint.constraintsWithVisualFormat_options_metrics_views_(
+	"V:|-[video(==180)]",
+	0,
+	None,
+	{"video": video_view},
+))
 
 # message view
 
