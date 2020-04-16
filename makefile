@@ -68,11 +68,11 @@ archive:
 pkg: $(app) $(dist)
 
 $(dist): $(app)
-	mkdir $(DIST_PATH)
+	mkdir -p $(DIST_PATH)
 	cp -r $^ $(DIST_PATH)
 	pkgbuild --root $(DIST_PATH) --identifier $(IDENTIFIER) --version $(VERSION) --install-location /Applications $@
 	rm -rf $(DIST_PATH)
 
 
 clean:
-	-rm -rf $(app) $(src) $(dist) $(icon) $(iconset)
+	-rm -rf $(app) $(src) $(dist) $(icon) $(iconset) $(DIST_PATH)

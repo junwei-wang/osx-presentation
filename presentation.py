@@ -62,6 +62,7 @@ HELP = [
 	("w",         "toggle web view"),
 	("m",         "toggle movie view"),
 	("s",         "show slide view"),
+	("v",         "show/hide video view"),
 	("f/F5/⎋",    "toggle/enter/leave fullscreen"),
 	("x",         "switch screens"),
 	("←|↑|⇞",     "previous page"),
@@ -198,7 +199,7 @@ from AppKit import (
 	NSOpenPanel, NSFileHandlingPanelOKButton,
 	NSAlert, NSAlertDefaultReturn, NSAlertAlternateReturn,
 	NSView,
-	NSViewWidthSizable, NSViewHeightSizable,
+	NSViewWidthSizable, NSViewHeightSizable, NSViewNotSizable,
 	NSWindow, NSColor,
 	NSMiniaturizableWindowMask, NSResizableWindowMask, NSTitledWindowMask,
 	NSBackingStoreBuffered,
@@ -209,7 +210,7 @@ from AppKit import (
 	NSRectFillUsingOperation, NSFrameRectWithWidth, NSFrameRect, NSEraseRect,
 	NSRect, NSZeroRect,
 	NSColor, NSCursor, NSFont,
-	NSFontAttributeName,	NSForegroundColorAttributeName,
+	NSFontAttributeName, NSForegroundColorAttributeName,
 	NSStrokeColorAttributeName, NSStrokeWidthAttributeName,
 	NSUpArrowFunctionKey, NSLeftArrowFunctionKey,
 	NSDownArrowFunctionKey, NSRightArrowFunctionKey,
@@ -220,6 +221,7 @@ from AppKit import (
 	NSScreen, NSWorkspace, NSImage,
 	NSBezierPath, NSRoundLineCapStyle, NSEvenOddWindingRule,
 	NSSlider,
+	NSLayoutConstraint,
 )
 
 try:
@@ -242,15 +244,20 @@ from WebKit import (
 )
 
 from AVFoundation import (
-	AVAsset, AVPlayerItem,
-	AVPlayer, AVPlayerLayer,
+	AVAsset, AVPlayerItem, AVPlayer, AVPlayerLayer,
 	AVAssetImageGenerator,
+	AVCaptureSession, AVCaptureDevice, AVCaptureDeviceInput,
+	AVCaptureVideoPreviewLayer,
 )
 
 try:
-	from AVFoundation import AVPlayerItemStatusReadyToPlay
+	from AVFoundation import (
+		AVPlayerItemStatusReadyToPlay,
+		AVMediaTypeVideo,
+	)
 except:
 	AVPlayerItemStatusReadyToPlay = 1
+	AVMediaTypeVideo = "vide"
 
 
 if sys.version_info[0] == 3:
@@ -551,7 +558,6 @@ def draw_page(page):
 	NSEraseRect(page.boundsForBox_(kPDFDisplayBoxCropBox))
 	page.drawWithBox_(kPDFDisplayBoxCropBox)
 	
-	NSColor.blackColor().setFill()
 	for annotation in annotations(page):
 		if not annotation in movies:
 			continue
@@ -621,11 +627,12 @@ class SlideView(NSView):
 		x, y = cursor_location
 		if self.show_spotlight:
 			spotlight = NSBezierPath.bezierPathWithRect_(bounds)
-			r = 20.*self.cursor_scale
-			spotlight.appendBezierPathWithOvalInRect_(((x-r, y-r), (2*r, 2*r)))
-			spotlight.setWindingRule_(NSEvenOddWindingRule)
-			NSColor.blackColor().colorWithAlphaComponent_(.5).setFill()
-			spotlight.fill()
+			if spotlight.containsPoint_(cursor_location):
+				r = 20.*self.cursor_scale
+				spotlight.appendBezierPathWithOvalInRect_(((x-r, y-r), (2*r, 2*r)))
+				spotlight.setWindingRule_(NSEvenOddWindingRule)
+				NSColor.colorWithCalibratedWhite_alpha_(.0, .25).setFill()
+				spotlight.fill()
 		elif self.show_cursor:
 			cursor_bounds = NSRect()
 			W, H = CURSOR.size()
@@ -636,6 +643,8 @@ class SlideView(NSView):
 				cursor_bounds, NSZeroRect, NSCompositeSourceAtop, 1.
 			)
 		
+		self.transform = transform
+		self.transform.invert()
 		NSGraphicsContext.restoreGraphicsState()
 	
 	def showCursor(self):
@@ -651,6 +660,128 @@ class SlideView(NSView):
 	def hideCursor_(self, timer):
 		self.show_cursor = False
 		self.setNeedsDisplay_(True)
+
+
+class MovieView(NSView):
+	def initWithFrame_(self, frame):
+		assert NSView.initWithFrame_(self, frame) == self
+		
+		self.setWantsLayer_(True)
+		player_layer = AVPlayerLayer.playerLayerWithPlayer_(player)
+		player_layer.setFrame_(frame)
+		self.setLayer_(player_layer)
+		
+		self.slider = NSSlider.alloc().initWithFrame_(((0, 5), (frame.size.width, 15)))
+		self.slider.setTarget_(self)
+		self.slider.setAction_("slide:")
+		add_subview(self, self.slider, NSViewWidthSizable)
+		
+		return self
+	
+	def mouseDown_(self, event):
+		if self.isPlaying():
+			self.pause()
+		else:
+			self.play()
+	
+	def setHidden_(self, hidden):
+		NSView.setHidden_(self, hidden)
+		if self.isHidden():
+			self.pause()
+	
+	def slide_(self, slider):
+		self._pause()
+		
+		p = slider.doubleValue()
+		(t, st, _, _) = player.currentTime()
+		try:
+			(d, sd, _, _) = player.currentItem().duration()
+			t = int(p*(1.*d/sd)*st)
+		except: # no current item
+			return
+		player.seekToTime_toleranceBefore_toleranceAfter_(
+			(t, st, 1, 0), (1, st, 1, 0), (1, st, 1, 0))
+		self.seekSlider_(None)
+	
+	def stepByCount_(self, count):
+		self._pause()
+		player.currentItem().stepByCount_(count)
+		self.seekSlider_(None)
+	
+	def seekSlider_(self, timer):
+		(t, st, _, _) = player.currentTime()
+		try:
+			(d, sd, _, _) = player.currentItem().duration()
+			p = (1.*t/st) / (1.*d/sd)
+		except: # no current item
+			return 0.
+		self.slider.setDoubleValue_(p)
+		return p
+	
+	def play(self):
+		player.play()
+		self.timer = NSTimer.scheduledTimerWithTimeInterval_target_selector_userInfo_repeats_(
+			1./15,
+			self, self.seekSlider_,
+			None, YES
+		)
+	
+	def playItem_(self, player_item):
+		player.replaceCurrentItemWithPlayerItem_(player_item)
+		self.play()
+	
+	def _pause(self):
+		player.pause()
+		try:
+			self.timer.invalidate()
+		except:
+			pass
+
+	def pause(self):
+		self._pause()
+		self.seekSlider_(None)
+	
+	def isPlaying(self):
+		return player.rate() > 0.
+
+
+class VideoView(NSView):
+	origin = 10, 10
+	TOP, BOTTOM = "V:|-[video(==180)]", "V:[video(==180)]-|"
+	LEFT, RIGHT = "H:|-[video(==320)]", "H:[video(==320)]-|"
+	
+	def initWithFrame_(self, frame):
+		assert NSView.initWithFrame_(self, frame) == self
+		self.setWantsLayer_(True)
+		self.session = AVCaptureSession.alloc().init()
+		self.preview = AVCaptureVideoPreviewLayer.layerWithSession_(self.session)
+		self.preview.setFrame_(frame)
+		self.setLayer_(self.preview)
+		self.setAlphaValue_(.85)
+		self.setTranslatesAutoresizingMaskIntoConstraints_(False)
+		return self
+	
+	def setHidden_(self, hidden):
+		if hidden == False:
+			self.device = AVCaptureDevice.defaultDeviceWithMediaType_(AVMediaTypeVideo)
+			self.input = AVCaptureDeviceInput.deviceInputWithDevice_error_(self.device, None)
+			if self.session.canAddInput_(self.input):
+				self.session.addInput_(self.input)
+				self.session.startRunning()
+		else:
+			self.session.stopRunning()
+		return super(VideoView, self).setHidden_(hidden)
+	
+	def requiresConstraintBasedLayout(self):
+		return True
+	
+	def align_(self, positions):
+		self.removeConstraints_(self.constraints())
+		NSLayoutConstraint.activateConstraints_(sum(
+			(NSLayoutConstraint.constraintsWithVisualFormat_options_metrics_views_(
+				p, 0, None, {"video": self})
+			for p in positions), [])
+		)
 
 
 class MessageView(NSView):
@@ -710,6 +841,10 @@ class MessageView(NSView):
 
 def hasModifiers(event, mask):
 	return (event.modifierFlags() & mask) == mask
+
+def transform_rect(transform, rect):
+	origin, size = rect
+	return (transform.transformPoint_(origin), transform.transformSize_(size))
 
 class PresenterView(NSView):
 	transform = NSAffineTransform.transform()
@@ -810,6 +945,13 @@ class PresenterView(NSView):
 		# screen border & cropping
 		NSColor.grayColor().setFill()
 		NSFrameRect(page_rect)
+
+		# video view proxy
+		if not video_view.isHidden():
+			NSColor.colorWithCalibratedWhite_alpha_(.25, .25).setFill()
+			rect = transform_rect(slide_view.transform, video_view.frame())
+			NSRectFillUsingOperation(rect, NSCompositeSourceAtop)
+
 		NSGraphicsContext.restoreGraphicsState()
 		NSRectFillUsingOperation(((0, 0), (margin, height)), NSCompositeClear)
 		NSRectFillUsingOperation(((margin, height-1.5*margin), (width+MINIATURE_WIDTH-margin, 1.5*margin)), NSCompositeClear)
@@ -924,11 +1066,8 @@ class PresenterView(NSView):
 			if type(annotation) != PDFAnnotationLink:
 				continue
 			
-			origin, size = annotation.bounds()
-			rect = (self.transform.transformPoint_(origin),
-			        self.transform.transformSize_(size))
+			rect = transform_rect(self.transform, annotation.bounds())
 			self.addCursorRect_cursor_(rect, NSCursor.pointingHandCursor())
-			
 			self.addToolTipRect_owner_userData_(rect, self, i)
 	
 	
@@ -1084,6 +1223,7 @@ class PresenterView(NSView):
 				'b':                     toggle_black_view,
 				'w':                     toggle_web_view,
 				'm':                     toggle_movie_view,
+				'v':                     toggle_video_view,
 				's':                     presentation_show,
 				NSLeftArrowFunctionKey:  prev_page,
 				NSUpArrowFunctionKey:    prev_page,
@@ -1372,6 +1512,12 @@ class MovieView(NSView):
 movie_view = create_view(MovieView, frame=frame)
 add_subview(presentation_view, movie_view)
 
+# video view
+
+video_view = VideoView.alloc().initWithFrame_(((0, 0), (320, 180)))
+add_subview(presentation_view, video_view)
+video_view.align_((VideoView.TOP, VideoView.RIGHT))
+
 # message view
 
 if show_feed:
@@ -1392,7 +1538,13 @@ def toggle_view(view):
 def toggle_black_view(): toggle_view(black_view)
 def toggle_web_view():   toggle_view(web_view)
 def toggle_movie_view(): toggle_view(movie_view)
+def toggle_video_view():
+	if video_view.isHidden():
+		video_view.setHidden_(False)
+	else:
+		video_view.setHidden_(True)
 
+toggle_video_view()
 presentation_show()
 
 
