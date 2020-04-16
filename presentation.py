@@ -600,6 +600,7 @@ def draw_page(page):
 
 class SlideView(NSView):
 	cursor_scale = 1.
+	spotlight_radius = 20.
 	show_cursor = False
 	show_spotlight = False
 	hide_timer = None
@@ -628,10 +629,10 @@ class SlideView(NSView):
 		if self.show_spotlight:
 			spotlight = NSBezierPath.bezierPathWithRect_(bounds)
 			if spotlight.containsPoint_(cursor_location):
-				r = 20.*self.cursor_scale
+				r = self.spotlight_radius*self.cursor_scale
 				spotlight.appendBezierPathWithOvalInRect_(((x-r, y-r), (2*r, 2*r)))
 				spotlight.setWindingRule_(NSEvenOddWindingRule)
-				NSColor.colorWithCalibratedWhite_alpha_(.0, .25).setFill()
+				NSColor.colorWithCalibratedWhite_alpha_(.0, .1).setFill()
 				spotlight.fill()
 		elif self.show_cursor:
 			cursor_bounds = NSRect()
@@ -1208,6 +1209,7 @@ class PresenterView(NSView):
 				slide_view.cursor_scale /= 1.5
 			else:
 				slide_view.cursor_scale *= 1.5
+			slide_view.showCursor()
 		
 		elif c == 'l':
 			slide_view.show_spotlight = not slide_view.show_spotlight
@@ -1257,10 +1259,16 @@ class PresenterView(NSView):
 			point = self.transform.transformPoint_(point)
 			self.zoomAt_by_(point, event.deltaY())
 		else:
-			if event.hasPreciseScrollingDeltas():
-				self.miniature_origin -= event.scrollingDeltaY()
-			else:
-				self.miniature_origin -= event.scrollingDeltaY()*MINIATURE_WIDTH
+			_, (width, height) = self.bounds()
+			ex, ey = event.locationInWindow()
+			delta = event.scrollingDeltaY()
+			if ex > width - MINIATURE_WIDTH: # miniature
+				if event.hasPreciseScrollingDeltas():
+					delta *= MINIATURE_WIDTH
+				self.miniature_origin -= delta
+			elif slide_view.show_spotlight:
+				slide_view.spotlight_radius *= exp(delta*0.01)
+				refresher.refresh([slide_view])
 		refresher.refresh([self])
 	
 	

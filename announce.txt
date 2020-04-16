@@ -1,4 +1,4 @@
-I am happy to announce the release of Présentation.app 2.1.0.
+I am happy to announce the release of Présentation.app 2.2.0.
 
 Présentation.app is a presentation tool for pdf slides (e.g. produced using LaTeX and the popular beamer class) for Mac OS X.
 You can download this release here: http://iihm.imag.fr/blanch/software/osx-presentation/releases/
@@ -29,6 +29,12 @@ https://foss.heptapod.net/macos-apps/osx-presentation
 
 
 Changes since 1.0
+
+2.2.0:
+  - added video overlay for remote presentations
+
+2.1.1:
+  - fixed crash on pdf without movies
 
 2.1.0:
   - added ability to change cursor size on presentation screen
