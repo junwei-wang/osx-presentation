@@ -756,22 +756,24 @@ class VideoView(NSView):
 		_, (w, h) = frame
 		self.w = w
 		self.h = h
-		self.setWantsLayer_(True)
-		self.session = AVCaptureSession.alloc().init()
-		self.preview = AVCaptureVideoPreviewLayer.layerWithSession_(self.session)
-		self.preview.setVideoGravity_(AVLayerVideoGravityResizeAspectFill)
-		self.preview.setFrame_(frame)
-		self.setLayer_(self.preview)
-		self.setAlphaValue_(.85)
+		self.setAlphaValue_(.75)
 		self.setTranslatesAutoresizingMaskIntoConstraints_(False)
+		self.session = AVCaptureSession.alloc().init()
+		self.setWantsLayer_(True)
+		preview = AVCaptureVideoPreviewLayer.layerWithSession_(self.session)
+		preview.setVideoGravity_(AVLayerVideoGravityResizeAspectFill)
+		preview.setFrame_(frame)
+		preview.setMasksToBounds_(True)
+		preview.setCornerRadius_(15.)
+		self.setLayer_(preview)
 		return self
 	
 	def setHidden_(self, hidden):
 		if hidden == False:
-			self.device = AVCaptureDevice.defaultDeviceWithMediaType_(AVMediaTypeVideo)
-			self.input = AVCaptureDeviceInput.deviceInputWithDevice_error_(self.device, None)
-			if self.session.canAddInput_(self.input):
-				self.session.addInput_(self.input)
+			device = AVCaptureDevice.defaultDeviceWithMediaType_(AVMediaTypeVideo)
+			input = AVCaptureDeviceInput.deviceInputWithDevice_error_(device, None)
+			if self.session.canAddInput_(input):
+				self.session.addInput_(input)
 				self.session.startRunning()
 		else:
 			self.session.stopRunning()
