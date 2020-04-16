@@ -466,6 +466,7 @@ def get_movie(url):
 	player.replaceCurrentItemWithPlayerItem_(player_item)
 	app.run()
 	restarted = True
+	player.replaceCurrentItemWithPlayerItem_(None)
 	
 	if not item_observer.playable:
 		return
@@ -693,10 +694,10 @@ class MovieView(NSView):
 		
 		p = slider.doubleValue()
 		(t, st, _, _) = player.currentTime()
-		(d, sd, _, _) = player.currentItem().duration()
 		try:
+			(d, sd, _, _) = player.currentItem().duration()
 			t = int(p*(1.*d/sd)*st)
-		except ZeroDivisionError:
+		except: # no current item
 			return
 		player.seekToTime_toleranceBefore_toleranceAfter_(
 			(t, st, 1, 0), (1, st, 1, 0), (1, st, 1, 0))
@@ -709,10 +710,10 @@ class MovieView(NSView):
 	
 	def seekSlider_(self, timer):
 		(t, st, _, _) = player.currentTime()
-		(d, sd, _, _) = player.currentItem().duration()
 		try:
+			(d, sd, _, _) = player.currentItem().duration()
 			p = (1.*t/st) / (1.*d/sd)
-		except ZeroDivisionError:
+		except: # no current item
 			return 0.
 		self.slider.setDoubleValue_(p)
 		return p
