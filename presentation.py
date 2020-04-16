@@ -254,10 +254,12 @@ try:
 	from AVFoundation import (
 		AVPlayerItemStatusReadyToPlay,
 		AVMediaTypeVideo,
+		AVLayerVideoGravityResizeAspectFill,
 	)
 except:
 	AVPlayerItemStatusReadyToPlay = 1
 	AVMediaTypeVideo = "vide"
+	AVLayerVideoGravityResizeAspectFill = "AVLayerVideoGravityResizeAspectFill"
 
 
 if sys.version_info[0] == 3:
@@ -746,15 +748,18 @@ class MovieView(NSView):
 
 
 class VideoView(NSView):
-	origin = 10, 10
-	TOP, BOTTOM = "V:|-[video(==180)]", "V:[video(==180)]-|"
-	LEFT, RIGHT = "H:|-[video(==320)]", "H:[video(==320)]-|"
+	TOP, BOTTOM = "V:|-[video(==%(h)s)]", "V:[video(==%(h)s)]-|"
+	LEFT, RIGHT = "H:|-[video(==%(w)s)]", "H:[video(==%(w)s)]-|"
 	
 	def initWithFrame_(self, frame):
 		assert NSView.initWithFrame_(self, frame) == self
+		_, (w, h) = frame
+		self.w = w
+		self.h = h
 		self.setWantsLayer_(True)
 		self.session = AVCaptureSession.alloc().init()
 		self.preview = AVCaptureVideoPreviewLayer.layerWithSession_(self.session)
+		self.preview.setVideoGravity_(AVLayerVideoGravityResizeAspectFill)
 		self.preview.setFrame_(frame)
 		self.setLayer_(self.preview)
 		self.setAlphaValue_(.85)
@@ -779,7 +784,7 @@ class VideoView(NSView):
 		self.removeConstraints_(self.constraints())
 		NSLayoutConstraint.activateConstraints_(sum(
 			(NSLayoutConstraint.constraintsWithVisualFormat_options_metrics_views_(
-				p, 0, None, {"video": self})
+				p % {"w": self.w, "h": self.h}, 0, None, {"video": self})
 			for p in positions), [])
 		)
 
@@ -1432,9 +1437,9 @@ add_subview(presentation_view, movie_view)
 
 # video view
 
-video_view = VideoView.alloc().initWithFrame_(((0, 0), (320, 180)))
+video_view = VideoView.alloc().initWithFrame_(((0, 0), (200, 180)))
 add_subview(presentation_view, video_view)
-video_view.align_((VideoView.TOP, VideoView.RIGHT))
+video_view.align_((VideoView.BOTTOM, VideoView.RIGHT))
 
 # message view
 
