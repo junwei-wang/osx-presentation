@@ -183,13 +183,11 @@ setVerbose(1)
 
 from objc import nil, NO, YES
 from Foundation import (
-	NSLog, NSNotificationCenter,
+	NSLog, NSNotificationCenter, NSUserDefaults, NSAffineTransform,
 	NSObject, NSTimer, NSError, NSString, NSData, NSArray,
 	NSAttributedString, NSUnicodeStringEncoding,
 	NSURL, NSURLRequest, NSURLConnection,
 	NSURLRequestReloadIgnoringLocalCacheData,
-	NSAffineTransform,
-	NSUserDefaults,
 	NSKeyValueObservingOptionOld, NSKeyValueObservingOptionNew,
 )
 
@@ -197,30 +195,26 @@ from AppKit import (
 	NSApplication, NSBundle, NSEvent,
 	NSApplicationDidFinishLaunchingNotification,
 	NSOpenPanel, NSFileHandlingPanelOKButton,
+	NSColorPanel,
 	NSAlert, NSAlertDefaultReturn, NSAlertAlternateReturn,
-	NSView,
+	NSWindow, NSView, NSSlider, NSMenu, NSMenuItem, NSCursor,
 	NSViewWidthSizable, NSViewHeightSizable, NSViewNotSizable,
-	NSWindow, NSColor,
 	NSMiniaturizableWindowMask, NSResizableWindowMask, NSTitledWindowMask,
 	NSBackingStoreBuffered,
 	NSCommandKeyMask, NSAlternateKeyMask, NSControlKeyMask,
-	NSMenu, NSMenuItem,
 	NSGraphicsContext,
 	NSCompositeClear, NSCompositeSourceAtop, NSCompositeCopy,
 	NSRectFillUsingOperation, NSFrameRectWithWidth, NSFrameRect, NSEraseRect,
-	NSRect, NSZeroRect,
-	NSColor, NSCursor, NSFont,
-	NSFontAttributeName, NSForegroundColorAttributeName,
+	NSRect, NSZeroRect, NSColor,
+	NSFont, NSFontAttributeName, NSForegroundColorAttributeName,
 	NSStrokeColorAttributeName, NSStrokeWidthAttributeName,
 	NSUpArrowFunctionKey, NSLeftArrowFunctionKey,
 	NSDownArrowFunctionKey, NSRightArrowFunctionKey,
 	NSHomeFunctionKey, NSEndFunctionKey,
 	NSPageUpFunctionKey, NSPageDownFunctionKey,
-	NSPrevFunctionKey, NSNextFunctionKey,
-	NSF5FunctionKey,
+	NSPrevFunctionKey, NSNextFunctionKey, NSF5FunctionKey,
 	NSScreen, NSWorkspace, NSImage,
 	NSBezierPath, NSRoundLineCapStyle, NSEvenOddWindingRule,
-	NSSlider,
 	NSLayoutConstraint,
 )
 
@@ -231,8 +225,7 @@ except:
 
 
 from Quartz import (
-	PDFDocument, PDFAnnotationText, PDFAnnotationLink,
-	PDFActionNamed,
+	PDFDocument, PDFAnnotationText, PDFAnnotationLink, PDFActionNamed,
 	kPDFActionNamedNextPage, kPDFActionNamedPreviousPage,
 	kPDFActionNamedFirstPage, kPDFActionNamedLastPage,
 	kPDFActionNamedGoBack, kPDFActionNamedGoForward,
@@ -244,13 +237,12 @@ from WebKit import (
 )
 
 from AVFoundation import (
-	AVAsset, AVPlayerItem, AVPlayer, AVPlayerLayer,
-	AVAssetImageGenerator,
+	AVAsset, AVPlayerItem, AVPlayer, AVPlayerLayer, AVAssetImageGenerator,
 	AVCaptureSession, AVCaptureDevice, AVCaptureDeviceInput,
 	AVCaptureVideoPreviewLayer,
 )
 
-try:
+try: # missing constants for some bindings
 	from AVFoundation import (
 		AVPlayerItemStatusReadyToPlay,
 		AVMediaTypeVideo,
