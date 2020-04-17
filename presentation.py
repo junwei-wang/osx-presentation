@@ -1393,147 +1393,6 @@ class PresenterView(NSView):
 			web_view.mainFrame().loadRequest_(NSURLRequest.requestWithURL_(url))
 
 
-# window utils ###############################################################
-
-def create_window(title, Window=NSWindow):
-	window = Window.alloc().initWithContentRect_styleMask_backing_defer_screen_(
-		PRESENTER_FRAME,
-		NSMiniaturizableWindowMask|NSResizableWindowMask|NSTitledWindowMask,
-		NSBackingStoreBuffered,
-		NO,
-		None,
-	)
-	window.setTitle_(title)
-	window.makeKeyAndOrderFront_(nil)
-	window.setBackgroundColor_(NSColor.blackColor())
-	window.setAcceptsMouseMovedEvents_(True)
-	return window
-
-def create_view(View, frame=None, window=None):
-	if frame is None:
-		frame = window.frame()
-	view = View.alloc().initWithFrame_(frame)
-	view.setBackgroundColor_(NSColor.blackColor())
-	if window is not None:
-		window.setContentView_(view)
-		window.setInitialFirstResponder_(view)
-	return view
-
-def add_subview(view, subview, autoresizing_mask=NSViewWidthSizable|NSViewHeightSizable):
-	subview.setAutoresizingMask_(autoresizing_mask)
-	subview.setFrameOrigin_((0, 0))
-	view.addSubview_(subview)
-
-
-# presentation window ########################################################
-
-# work around fragile presentation_window.makeFirstResponder_(presenter_view)
-class Window(NSWindow):
-	def keyDown_(self, event):
-		return presenter_window.sendEvent_(event)
-
-presentation_window = create_window(file_name, Window=Window)
-presentation_view   = presentation_window.contentView()
-frame = presentation_view.frame()
-
-# slides
-
-slide_view = create_view(SlideView, frame=frame)
-add_subview(presentation_view, slide_view)
-
-# black view
-
-black_view = create_view(NSView, frame=frame)
-add_subview(presentation_view, black_view)
-
-# web view
-
-web_view = WebView.alloc().initWithFrame_frameName_groupName_(frame, nil, nil)
-
-class WebFrameLoadDelegate(NSObject):
-	def webView_didCommitLoadForFrame_(self, view, frame):
-		presentation_show(web_view)
-web_frame_load_delegate = WebFrameLoadDelegate.alloc().init()
-web_view.setFrameLoadDelegate_(web_frame_load_delegate)
-
-add_subview(presentation_view, web_view)
-
-# movie view
-
-movie_view = create_view(MovieView, frame=frame)
-add_subview(presentation_view, movie_view)
-
-# video view
-
-video_view = VideoView.alloc().initWithFrame_(((0, 0), (200, 180)))
-add_subview(presentation_view, video_view)
-video_view.align_((VideoView.BOTTOM, VideoView.RIGHT))
-
-# message view
-
-if show_feed:
-	frame.size.height = 40
-	message_view = MessageView.alloc().initWithFrame_(frame)
-	add_subview(presentation_view, message_view, NSViewWidthSizable)
-
-
-# views visibility
-
-def presentation_show(visible_view=slide_view):
-	for view in [slide_view, black_view, web_view, movie_view]:
-		view.setHidden_(view != visible_view)
-
-def toggle_view(view):
-	presentation_show(view if view.isHidden() else slide_view)
-
-def toggle_black_view(): toggle_view(black_view)
-def toggle_web_view():   toggle_view(web_view)
-def toggle_movie_view(): toggle_view(movie_view)
-def toggle_video_view():
-	if video_view.isHidden():
-		video_view.setHidden_(False)
-	else:
-		video_view.setHidden_(True)
-
-toggle_video_view()
-presentation_show()
-
-
-# presenter window ###########################################################
-
-presenter_window = create_window(file_name)
-presenter_view   = create_view(PresenterView, window=presenter_window)
-
-presenter_window.center()
-presenter_window.makeFirstResponder_(presenter_view)
-presentation_window.makeFirstResponder_(presenter_view)
-
-
-# handling full screens ######################################################
-
-_switched_screens = False
-
-def toggle_fullscreen(fullscreen=None):
-	_fullscreen = presenter_view.isInFullScreenMode()
-	if fullscreen is None:
-		fullscreen = not _fullscreen
-	
-	if fullscreen != _fullscreen:
-		screens = NSScreen.screens()
-		if _switched_screens:
-			screens = reversed(screens)
-		for window, screen in reversed(list(zip([presenter_window, presentation_window],
-		                                        screens))):
-			view = window.contentView()
-			if fullscreen:
-				view.enterFullScreenMode_withOptions_(screen, {})
-			else:
-				view.exitFullScreenModeWithOptions_({})
-		presenter_window.makeFirstResponder_(presenter_view)
-	
-	return _fullscreen
-
-
 # application delegate #######################################################
 
 # menus
@@ -1709,11 +1568,12 @@ def setup_touchbar():
 	ImageRight = NSImage.imageNamed_(NSImageNameTouchBarGoForwardTemplate)
 	ImageUp    = NSImage.imageNamed_(NSImageNameTouchBarGoUpTemplate)
 
-	from objc import protocolNamed, classAddMethod
+	from objc import protocolNamed, Category
 	
 	global ApplicationDelegate
 	NSTouchBarProvider = protocolNamed('NSTouchBarProvider')
-	class TouchBarDelegate(ApplicationDelegate, NSTouchBarProvider):
+	class TouchBarDelegate(ApplicationDelegate):
+		__pyobjc_protocols__ = [NSTouchBarProvider]
 		def applicationDidFinishLaunching_(self, notification):
 			super(TouchBarDelegate, self).applicationDidFinishLaunching_(notification)
 			app.setAutomaticCustomizeTouchBarMenuItemEnabled_(True)
@@ -1737,7 +1597,7 @@ def setup_touchbar():
 				items += ["NSTouchBarItemIdentifierFixedSpaceSmall", u"u"]
 			if not movie_view.isHidden():
 				items += ["NSTouchBarItemIdentifierFixedSpaceSmall", u"play", u"p"]
-				seekSlider_(movie_view, None)
+				movie_view.seekSlider_(None)
 			touchbar.setDefaultItemIdentifiers_(items)
 			return touchbar
 		
@@ -1768,28 +1628,172 @@ def setup_touchbar():
 			return item
 	ApplicationDelegate = TouchBarDelegate
 
-	movie_view_seekSlider_ = movie_view.seekSlider_
-	def seekSlider_(self, timer):
-		p = movie_view_seekSlider_(timer)
-		application_delegate.touchbar.itemForIdentifier_(u"p").setDoubleValue_(p)
-		play = application_delegate.touchbar.itemForIdentifier_(u"play").view()
-		if self.isPlaying():
-			if play.action() == "play":
-				play.setImage_(ImagePause)
-				play.setAction_("pause")
-		else:
-			if play.action() == "pause":
-				play.setImage_(ImagePlay)
-				play.setAction_("play")
-	classAddMethod(MovieView, "seekSlider_", seekSlider_)
-
-	movie_view_setHidden_ = movie_view.setHidden_
-	def setHidden_(self, hidden):
-		movie_view_setHidden_(hidden)
-		app.setTouchBar_(None) # invalidate touchbar
-	classAddMethod(MovieView, "setHidden_", setHidden_)
+	global MovieView
+	class TouchBarMovieView(MovieView):
+		def seekSlider_(self, timer):
+			p = super(TouchBarMovieView, self).seekSlider_(timer)
+			delegate = app.delegate()
+			if delegate is None: return
+			touchbar = delegate.touchbar
+			touchbar.itemForIdentifier_(u"p").setDoubleValue_(p)
+			play = touchbar.itemForIdentifier_(u"play").view()
+			if self.isPlaying():
+				if play.action() == "play":
+					play.setImage_(ImagePause)
+					play.setAction_("pause")
+			else:
+				if play.action() == "pause":
+					play.setImage_(ImagePlay)
+					play.setAction_("play")
+			return p
+		
+		def setHidden_(self, hidden):
+			super(TouchBarMovieView, self).setHidden_(hidden)
+			app.setTouchBar_(None) # invalidate touchbar
+	MovieView = TouchBarMovieView
 
 setup_touchbar()
+
+
+# window utils ###############################################################
+
+def create_window(title, Window=NSWindow):
+	window = Window.alloc().initWithContentRect_styleMask_backing_defer_screen_(
+		PRESENTER_FRAME,
+		NSMiniaturizableWindowMask|NSResizableWindowMask|NSTitledWindowMask,
+		NSBackingStoreBuffered,
+		NO,
+		None,
+	)
+	window.setTitle_(title)
+	window.makeKeyAndOrderFront_(nil)
+	window.setBackgroundColor_(NSColor.blackColor())
+	window.setAcceptsMouseMovedEvents_(True)
+	return window
+
+def create_view(View, frame=None, window=None):
+	if frame is None:
+		frame = window.frame()
+	view = View.alloc().initWithFrame_(frame)
+	view.setBackgroundColor_(NSColor.blackColor())
+	if window is not None:
+		window.setContentView_(view)
+		window.setInitialFirstResponder_(view)
+	return view
+
+def add_subview(view, subview, autoresizing_mask=NSViewWidthSizable|NSViewHeightSizable):
+	subview.setAutoresizingMask_(autoresizing_mask)
+	subview.setFrameOrigin_((0, 0))
+	view.addSubview_(subview)
+
+
+# presentation window ########################################################
+
+# work around fragile presentation_window.makeFirstResponder_(presenter_view)
+class Window(NSWindow):
+	def keyDown_(self, event):
+		return presenter_window.sendEvent_(event)
+
+presentation_window = create_window(file_name, Window=Window)
+presentation_view   = presentation_window.contentView()
+frame = presentation_view.frame()
+
+# slides
+
+slide_view = create_view(SlideView, frame=frame)
+add_subview(presentation_view, slide_view)
+
+# black view
+
+black_view = create_view(NSView, frame=frame)
+add_subview(presentation_view, black_view)
+
+# web view
+
+web_view = WebView.alloc().initWithFrame_frameName_groupName_(frame, nil, nil)
+
+class WebFrameLoadDelegate(NSObject):
+	def webView_didCommitLoadForFrame_(self, view, frame):
+		presentation_show(web_view)
+web_frame_load_delegate = WebFrameLoadDelegate.alloc().init()
+web_view.setFrameLoadDelegate_(web_frame_load_delegate)
+
+add_subview(presentation_view, web_view)
+
+# movie view
+
+movie_view = create_view(MovieView, frame=frame)
+add_subview(presentation_view, movie_view)
+
+# video view
+
+video_view = VideoView.alloc().initWithFrame_(((0, 0), (200, 180)))
+add_subview(presentation_view, video_view)
+video_view.align_((VideoView.BOTTOM, VideoView.RIGHT))
+
+# message view
+
+if show_feed:
+	frame.size.height = 40
+	message_view = MessageView.alloc().initWithFrame_(frame)
+	add_subview(presentation_view, message_view, NSViewWidthSizable)
+
+
+# views visibility
+
+def presentation_show(visible_view=slide_view):
+	for view in [slide_view, black_view, web_view, movie_view]:
+		view.setHidden_(view != visible_view)
+
+def toggle_view(view):
+	presentation_show(view if view.isHidden() else slide_view)
+
+def toggle_black_view(): toggle_view(black_view)
+def toggle_web_view():   toggle_view(web_view)
+def toggle_movie_view(): toggle_view(movie_view)
+def toggle_video_view():
+	if video_view.isHidden():
+		video_view.setHidden_(False)
+	else:
+		video_view.setHidden_(True)
+
+toggle_video_view()
+presentation_show()
+
+
+# presenter window ###########################################################
+
+presenter_window = create_window(file_name)
+presenter_view   = create_view(PresenterView, window=presenter_window)
+
+presenter_window.center()
+presenter_window.makeFirstResponder_(presenter_view)
+presentation_window.makeFirstResponder_(presenter_view)
+
+
+# handling full screens ######################################################
+
+_switched_screens = False
+
+def toggle_fullscreen(fullscreen=None):
+	_fullscreen = presenter_view.isInFullScreenMode()
+	if fullscreen is None:
+		fullscreen = not _fullscreen
+	
+	if fullscreen != _fullscreen:
+		screens = NSScreen.screens()
+		if _switched_screens:
+			screens = reversed(screens)
+		for window, screen in reversed(list(zip([presenter_window, presentation_window],
+		                                        screens))):
+			view = window.contentView()
+			if fullscreen:
+				view.enterFullScreenMode_withOptions_(screen, {})
+			else:
+				view.exitFullScreenModeWithOptions_({})
+		presenter_window.makeFirstResponder_(presenter_view)
+	
+	return _fullscreen
 
 
 # main loop ##################################################################
