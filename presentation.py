@@ -1283,13 +1283,10 @@ class PresenterView(NSView):
 		else:
 			_, (width, height) = self.bounds()
 			ex, ey = event.locationInWindow()
-			delta = event.scrollingDeltaY()
 			if ex > width - MINIATURE_WIDTH: # miniature
-				if event.hasPreciseScrollingDeltas():
-					delta *= MINIATURE_WIDTH
-				self.miniature_origin -= delta
+				self.miniature_origin -= event.scrollingDeltaY()
 			elif slide_view.show_spotlight:
-				slide_view.spotlight_radius *= exp(delta*0.01)
+				slide_view.spotlight_radius *= exp(event.deltaY()*0.05)
 				refresher.refresh([slide_view])
 		refresher.refresh([self])
 	
