@@ -80,6 +80,7 @@ HELP = [
 	("&lt;/&gt;", "step video backward/forward"),
 	("p/P",       "reduce/augment pointer/spotlight size"),
 	("l",         "toggle spotlight"),
+	("c",         "show/hide color picker for annotations"),
 	("e",         "erase on-screen annotations"),
 ]
 
@@ -646,7 +647,7 @@ class SlideView(NSView):
 				stroke(focus)
 				spotlight.appendBezierPath_(focus)
 				spotlight.setWindingRule_(NSEvenOddWindingRule)
-				NSColor.colorWithCalibratedWhite_alpha_(.5, .2).setFill()
+				NSColor.colorWithCalibratedWhite_alpha_(.5, .25).setFill()
 				spotlight.fill()
 		elif self.show_cursor:
 			cursor_bounds = NSRect()
