@@ -78,7 +78,7 @@ HELP = [
 	("+/-/0",     "zoom in/out/reset speaker notes or web view"),
 	("space",     "play/pause video (while in movie mode)"),
 	("&lt;/&gt;", "step video backward/forward"),
-	("c/C",       "reduce/augment cursor/spotlight size"),
+	("p/P",       "reduce/augment pointer/spotlight size"),
 	("l",         "toggle spotlight"),
 	("e",         "erase on-screen annotations"),
 ]
@@ -559,12 +559,13 @@ drawings = defaultdict(list)
 bbox = NSAffineTransform.transform()
 cursor_location = (0, 0)
 
-def stroke(path):
-	NSColor.whiteColor().setStroke()
-	path.setLineWidth_(2)
-	path.stroke()
-	NSColor.blackColor().setStroke()
-	path.setLineWidth_(1)
+def stroke(path, size=1, color=NSColor.blackColor(), outline=NSColor.whiteColor()):
+	if outline:
+		outline.setStroke()
+		path.setLineWidth_(size+1)
+		path.stroke()
+	color.setStroke()
+	path.setLineWidth_(size)
 	path.stroke()
 
 
@@ -1222,8 +1223,8 @@ class PresenterView(NSView):
 				clip.scaleUnitSquareToSize_(scale)
 				document.setNeedsLayout_(True)
 		
-		elif c in "cC":
-			if c == 'c':
+		elif c in "pP":
+			if c == 'p':
 				slide_view.cursor_scale /= 1.5
 			else:
 				slide_view.cursor_scale *= 1.5
@@ -1232,6 +1233,9 @@ class PresenterView(NSView):
 		elif c == 'l':
 			slide_view.show_spotlight = not slide_view.show_spotlight
 			slide_view.showCursor()
+		
+		elif c == 'c': # choose color
+			pass
 		
 		elif c == 'e': # erase annotation
 			del drawings[current_page]
