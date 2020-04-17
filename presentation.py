@@ -264,8 +264,13 @@ except:
 
 if sys.version_info[0] == 3:
 	_s = NSString.stringWithString_
+	def _e(result): # some binding version returns tuple with error
+		result, error = result
+		if error: raise error
+		return result
 else:
 	_s = NSString.stringWithUTF8String_
+	def _e(result): return result
 
 def _h(s):
 	h, _ = NSAttributedString.alloc().initWithHTML_documentAttributes_(
@@ -474,9 +479,9 @@ def get_movie(url):
 		return
 	
 	image_generator = AVAssetImageGenerator.assetImageGeneratorWithAsset_(asset)
-	image_ref = image_generator.copyCGImageAtTime_actualTime_error_(
+	image_ref = _e(image_generator.copyCGImageAtTime_actualTime_error_(
 		(0, 1, 1, 0), None, None,
-	)
+	))
 	poster = NSImage.alloc().initWithCGImage_size_(image_ref, (0, 0))
 	return player_item, poster
 
@@ -772,7 +777,7 @@ class VideoView(NSView):
 	def setHidden_(self, hidden):
 		if hidden == False:
 			device = AVCaptureDevice.defaultDeviceWithMediaType_(AVMediaTypeVideo)
-			input = AVCaptureDeviceInput.deviceInputWithDevice_error_(device, None)
+			input = _e(AVCaptureDeviceInput.deviceInputWithDevice_error_(device, None))
 			if self.session.canAddInput_(input):
 				self.session.addInput_(input)
 				self.session.startRunning()
