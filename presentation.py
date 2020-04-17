@@ -559,6 +559,15 @@ drawings = defaultdict(list)
 bbox = NSAffineTransform.transform()
 cursor_location = (0, 0)
 
+def stroke(path):
+	NSColor.whiteColor().setStroke()
+	path.setLineWidth_(2)
+	path.stroke()
+	NSColor.blackColor().setStroke()
+	path.setLineWidth_(1)
+	path.stroke()
+
+
 def draw_page(page):
 	bbox.concat()
 	
@@ -595,12 +604,7 @@ def draw_page(page):
 		)
 	
 	for path in drawings[current_page]:
-		NSColor.whiteColor().setStroke()
-		path.setLineWidth_(2)
-		path.stroke()
-		NSColor.blackColor().setStroke()
-		path.setLineWidth_(1)
-		path.stroke()
+		stroke(path)
 
 
 # presentation ###############################################################
@@ -637,9 +641,11 @@ class SlideView(NSView):
 			spotlight = NSBezierPath.bezierPathWithRect_(bounds)
 			if spotlight.containsPoint_(cursor_location):
 				r = self.spotlight_radius*self.cursor_scale
-				spotlight.appendBezierPathWithOvalInRect_(((x-r, y-r), (2*r, 2*r)))
+				focus = NSBezierPath.bezierPathWithOvalInRect_(((x-r, y-r), (2*r, 2*r)))
+				stroke(focus)
+				spotlight.appendBezierPath_(focus)
 				spotlight.setWindingRule_(NSEvenOddWindingRule)
-				NSColor.colorWithCalibratedWhite_alpha_(.0, .1).setFill()
+				NSColor.colorWithCalibratedWhite_alpha_(.5, .2).setFill()
 				spotlight.fill()
 		elif self.show_cursor:
 			cursor_bounds = NSRect()
