@@ -769,7 +769,6 @@ class VideoView(NSView):
 		_, (w, h) = frame
 		self.w = w
 		self.h = h
-		self.setAlphaValue_(.75)
 		self.setTranslatesAutoresizingMaskIntoConstraints_(False)
 		self.session = AVCaptureSession.alloc().init()
 		self.setWantsLayer_(True)
@@ -779,6 +778,7 @@ class VideoView(NSView):
 		preview.setMasksToBounds_(True)
 		preview.setCornerRadius_(15.)
 		self.setLayer_(preview)
+		self.setAlphaValue_(.75)
 		return self
 	
 	def setHidden_(self, hidden):
@@ -944,11 +944,6 @@ class PresenterView(NSView):
 		NSGraphicsContext.saveGraphicsState()
 		draw_page(self.page)
 		
-		if state == DRAW:
-			NSGraphicsContext.restoreGraphicsState()
-			NSGraphicsContext.restoreGraphicsState()
-			return
-		
 		# links
 		NSColor.blueColor().setFill()
 		for annotation in annotations(self.page):
@@ -978,6 +973,8 @@ class PresenterView(NSView):
 		NSRectFillUsingOperation(((margin+r*w, 0), (width+MINIATURE_WIDTH-margin+r*w, height)), NSCompositeClear)
 		NSRectFillUsingOperation(((0, 0), (width+MINIATURE_WIDTH, height-1.5*margin-r*h)), NSCompositeClear)
 		
+		if state == DRAW:
+			return
 		
 		# time
 		now = time.time()
