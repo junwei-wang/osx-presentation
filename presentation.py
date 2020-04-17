@@ -223,6 +223,10 @@ try:
 except:
 	from AppKit import NSApplicationDefined as NSEventTypeApplicationDefined
 
+try:
+	from AppKit import NSColorPanelModeCrayon
+except:
+	NSColorPanelModeCrayon = 7
 
 from Quartz import (
 	PDFDocument, PDFAnnotationText, PDFAnnotationLink, PDFActionNamed,
@@ -551,7 +555,11 @@ drawings = defaultdict(list)
 bbox = NSAffineTransform.transform()
 cursor_location = (0, 0)
 
-def stroke(path, size=1, color=NSColor.blackColor(), outline=NSColor.whiteColor()):
+color_chooser = NSColorPanel.sharedColorPanel()
+color_chooser.setMode_(NSColorPanelModeCrayon)
+color_chooser.setColor_(NSColor.blackColor())
+
+def stroke(path, color=NSColor.blackColor(), outline=NSColor.whiteColor(), size=1):
 	if outline:
 		outline.setStroke()
 		path.setLineWidth_(size+1)
@@ -596,8 +604,8 @@ def draw_page(page):
 			bounds, NSZeroRect, NSCompositeCopy, 1.
 		)
 	
-	for path in drawings[current_page]:
-		stroke(path)
+	for path, color in drawings[current_page]:
+		stroke(path, color)
 
 
 # presentation ###############################################################
@@ -1227,7 +1235,10 @@ class PresenterView(NSView):
 			slide_view.showCursor()
 		
 		elif c == 'c': # choose color
-			pass
+			if not color_chooser.isVisible():
+				color_chooser.orderFront_(None)
+			else:
+				color_chooser.orderOut_(None)
 		
 		elif c == 'e': # erase annotation
 			del drawings[current_page]
@@ -1310,7 +1321,7 @@ class PresenterView(NSView):
 			self.path.setLineCapStyle_(NSRoundLineCapStyle)
 			self.path.moveToPoint_(self.press_location)
 			self.path.lineToPoint_(cursor_location)
-			drawings[current_page].append(self.path)
+			drawings[current_page].append((self.path, color_chooser.color()))
 			state = DRAW
 		elif state == DRAW:
 			self.path.lineToPoint_(cursor_location)
