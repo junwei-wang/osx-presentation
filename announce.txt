@@ -1,4 +1,4 @@
-I am happy to announce the release of Présentation.app 2.2.0.
+I am happy to announce the release of Présentation.app 2.2.
 
 Présentation.app is a presentation tool for pdf slides (e.g. produced using LaTeX and the popular beamer class) for Mac OS X.
 You can download this release here: http://iihm.imag.fr/blanch/software/osx-presentation/releases/
