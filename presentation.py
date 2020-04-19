@@ -243,8 +243,8 @@ from WebKit import (
 
 from AVFoundation import (
 	AVAsset, AVPlayerItem, AVPlayer, AVPlayerLayer, AVAssetImageGenerator,
-	AVCaptureSession, AVCaptureDevice, AVCaptureDeviceInput,
-	AVCaptureVideoPreviewLayer,
+	AVCaptureSession, AVCaptureSessionPreset320x240,
+	AVCaptureDevice, AVCaptureDeviceInput, AVCaptureVideoPreviewLayer,
 )
 
 try: # missing constants for some bindings
@@ -772,6 +772,8 @@ class VideoView(NSView):
 		self.h = h
 		self.setTranslatesAutoresizingMaskIntoConstraints_(False)
 		self.session = AVCaptureSession.alloc().init()
+		if self.session.canSetSessionPreset_(AVCaptureSessionPreset320x240):
+			self.session.setSessionPreset_(AVCaptureSessionPreset320x240)
 		self.setWantsLayer_(True)
 		preview = AVCaptureVideoPreviewLayer.layerWithSession_(self.session)
 		preview.setVideoGravity_(AVLayerVideoGravityResizeAspectFill)
