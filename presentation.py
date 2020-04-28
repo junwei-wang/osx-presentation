@@ -33,8 +33,9 @@ if sys.version_info[0] == 3:
 
 NAME = "Présentation"
 ID = "fr.imag.iihm.blanch.osx-presentation"
-MAJOR, MINOR, PATCH = 2, 2, 0
-VERSION = "%s.%s.%s" % (MAJOR, MINOR, PATCH)
+MAJOR, MINOR, PATCH = 2, 2, 1
+BETA = True
+VERSION = "%s.%s.%s" % (MAJOR, MINOR, PATCH) + "b" if BETA else ""
 HOME = "http://iihm.imag.fr/blanch/software/osx-presentation/"
 COPYRIGHT = "Copyright © 2011-2020 Renaud Blanch"
 CREDITS = """

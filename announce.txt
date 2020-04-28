@@ -29,6 +29,9 @@ Its most notable features are:
 
 Changes since 1.0
 
+2.2.1:
+  - fixed bug in TouchBar support for pre 10.15
+
 2.2.0:
   - added video overlay for remote presentations
   - added possibility to choose color for onscreen annotation
