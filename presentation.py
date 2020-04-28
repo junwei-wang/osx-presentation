@@ -1629,7 +1629,7 @@ def setup_touchbar():
 			delegate = app.delegate()
 			if delegate is None: return
 			touchbar = delegate.touchbar
-			touchbar.itemForIdentifier_(u"p").setDoubleValue_(p)
+			touchbar.itemForIdentifier_(u"p").slider().setDoubleValue_(p)
 			play = touchbar.itemForIdentifier_(u"play").view()
 			if self.isPlaying():
 				if play.action() == "play":
