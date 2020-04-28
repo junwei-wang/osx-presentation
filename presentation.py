@@ -243,8 +243,7 @@ from WebKit import (
 
 from AVFoundation import (
 	AVAsset, AVPlayerItem, AVPlayer, AVPlayerLayer, AVAssetImageGenerator,
-	AVCaptureSession, AVCaptureSessionPreset320x240,
-	AVCaptureDevice, AVCaptureDeviceInput, AVCaptureVideoPreviewLayer,
+	AVCaptureSession, AVCaptureDevice, AVCaptureDeviceInput, AVCaptureVideoPreviewLayer,
 )
 
 try: # missing constants for some bindings
@@ -252,11 +251,13 @@ try: # missing constants for some bindings
 		AVPlayerItemStatusReadyToPlay,
 		AVMediaTypeVideo,
 		AVLayerVideoGravityResizeAspectFill,
+		AVCaptureSessionPreset320x240,
 	)
 except:
 	AVPlayerItemStatusReadyToPlay = 1
 	AVMediaTypeVideo = "vide"
 	AVLayerVideoGravityResizeAspectFill = "AVLayerVideoGravityResizeAspectFill"
+	AVCaptureSessionPreset320x240 = "AVCaptureSessionPreset320x240"
 
 
 if sys.version_info[0] == 3:
