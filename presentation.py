@@ -215,8 +215,8 @@ from AppKit import (
 	NSHomeFunctionKey, NSEndFunctionKey,
 	NSPageUpFunctionKey, NSPageDownFunctionKey,
 	NSPrevFunctionKey, NSNextFunctionKey, NSF5FunctionKey,
-	NSScreen, NSWorkspace, NSImage,
-	NSBezierPath, NSRoundLineCapStyle, NSEvenOddWindingRule,
+	NSScreen, NSWorkspace, NSImage, NSBezierPath,
+	NSRoundLineCapStyle, NSRoundLineJoinStyle, NSEvenOddWindingRule,
 	NSLayoutConstraint,
 )
 
@@ -607,8 +607,8 @@ def draw_page(page):
 			bounds, NSZeroRect, NSCompositeCopy, 1.
 		)
 	
-	for path, color in drawings[current_page]:
-		stroke(path, color)
+	for path, color, size in drawings[current_page]:
+		stroke(path, color, size=size)
 
 
 # presentation ###############################################################
@@ -1318,9 +1318,10 @@ class PresenterView(NSView):
 				return
 			self.path = NSBezierPath.bezierPath()
 			self.path.setLineCapStyle_(NSRoundLineCapStyle)
+			self.path.setLineJoinStyle_(NSRoundLineJoinStyle)
 			self.path.moveToPoint_(self.press_location)
 			self.path.lineToPoint_(cursor_location)
-			drawings[current_page].append((self.path, color_chooser.color()))
+			drawings[current_page].append((self.path, color_chooser.color(), slide_view.cursor_scale*2))
 			state = DRAW
 		elif state == DRAW:
 			self.path.lineToPoint_(cursor_location)
