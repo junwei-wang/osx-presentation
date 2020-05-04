@@ -33,9 +33,8 @@ if sys.version_info[0] == 3:
 
 NAME = "Présentation"
 ID = "fr.imag.iihm.blanch.osx-presentation"
-MAJOR, MINOR, PATCH = 2, 2, 1
-BETA = True
-VERSION = "%s.%s.%s" % (MAJOR, MINOR, PATCH) + "b" if BETA else ""
+MAJOR, MINOR, PATCH, BETA = 2, 2, 1, 'c'
+VERSION = "%s.%s.%s%s" % (MAJOR, MINOR, PATCH, BETA)
 HOME = "http://iihm.imag.fr/blanch/software/osx-presentation/"
 COPYRIGHT = "Copyright © 2011-2020 Renaud Blanch"
 CREDITS = """
@@ -1632,9 +1631,11 @@ def setup_touchbar():
 	class TouchBarMovieView(MovieView):
 		def seekSlider_(self, timer):
 			p = super(TouchBarMovieView, self).seekSlider_(timer)
-			delegate = app.delegate()
-			if delegate is None: return
-			touchbar = delegate.touchbar
+			try:
+				delegate = app.delegate()
+				touchbar = delegate.touchbar
+			except AttributeError:
+				return
 			touchbar.itemForIdentifier_(u"p").slider().setDoubleValue_(p)
 			play = touchbar.itemForIdentifier_(u"play").view()
 			if self.isPlaying():
